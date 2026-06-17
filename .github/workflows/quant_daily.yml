@@ -1,0 +1,67 @@
+name: 퀀트 스크리너 매일 자동 실행
+
+on:
+  # ── 매일 밤 11시 (KST = UTC+9 → UTC 14:00) ──
+  schedule:
+    - cron: '0 14 * * 1-5'   # 월~금 평일만 (주말 제외)
+
+  # ── 수동 실행 버튼 (테스트용) ──
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: '범위 선택 (1=100개 / 2=300개 / 3=전체)'
+        required: false
+        default: '2'
+
+jobs:
+  quant-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90       # 최대 90분 (전체 종목 시 여유있게)
+
+    steps:
+      # ① 레포지터리 체크아웃
+      - name: 레포지터리 체크아웃
+        uses: actions/checkout@v4
+
+      # ② Python 설치
+      - name: Python 3.11 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # ③ 패키지 설치
+      - name: 패키지 설치
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ④ DART API 키 파일 생성 (Secret에서)
+      - name: DART API 키 설정
+        run: echo "${{ secrets.DART_API_KEY }}" > dart_api.txt
+
+      # ⑤ 퀀트 스크리너 실행
+      - name: 퀀트 스크리너 실행
+        env:
+          GDRIVE_SA_JSON: ${{ secrets.GDRIVE_SA_JSON }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: |
+          SCOPE="${{ github.event.inputs.scope || '2' }}"
+          echo "▶ 스크리닝 범위: ${SCOPE} (1=100개 / 2=300개 / 3=전체)"
+          python quant_screener_v33.py \
+            --auto \
+            --market 1 \
+            --scope "${SCOPE}" \
+            --no-cache
+          echo "▶ 실행 완료"
+
+      # ⑥ 실행 로그 아티팩트 저장 (7일 보관)
+      - name: 로그 아티팩트 저장
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quant-log-${{ github.run_number }}
+          path: |
+            quant_*.xlsx
+            매매신호_*.json
+          retention-days: 7
