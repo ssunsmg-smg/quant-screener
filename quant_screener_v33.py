@@ -404,6 +404,11 @@ def parse_args():
     p.add_argument("--w-stability", type=float, default=10.0)
     p.add_argument("--output-dir",  type=str,   default=BASE_DIR)
     p.add_argument("--no-cache",    action="store_true", help="캐시 무시하고 새로 수집")
+    p.add_argument("--auto",        action="store_true", help="비대화형 자동 실행 (GitHub Actions 전용)")
+    p.add_argument("--market",      type=str,   default="1", choices=["1","2","3"],
+                   help="시장: 1=한국 2=미국 3=둘다")
+    p.add_argument("--scope",       type=str,   default="2", choices=["1","2","3"],
+                   help="범위: 1=100개 2=300개 3=전체")
     return p.parse_args()
 
 # ══════════════════════════════════════════════════════════
@@ -4996,26 +5001,12 @@ def select_mode_interactive():
 def main():
     _print_pkg_status()
 
-    # ── argparse에 --auto / --market / --scope 추가 ──
-    # (기존 parse_args는 그대로 유지하고 여기서 추가 인자만 처리)
-    import argparse as _ap
-    pre = _ap.ArgumentParser(add_help=False)
-    pre.add_argument("--auto",   action="store_true",
-                     help="비대화형 자동 실행 (작업 스케줄러 전용)")
-    pre.add_argument("--market", type=str, default="1",
-                     choices=["1","2","3"],
-                     help="시장 선택: 1=한국 2=미국 3=둘다 (기본: 1)")
-    pre.add_argument("--scope",  type=str, default="2",
-                     choices=["1","2","3"],
-                     help="범위: 1=100개 2=300개 3=전체 (기본: 2)")
-    pre_args, _ = pre.parse_known_args()
+    args = parse_args()   # --auto / --market / --scope 포함 전체 파싱
 
-    args = parse_args()           # 기존 전체 인자 파싱
-
-    if pre_args.auto:
-        # ── 자동 실행 모드 (작업 스케줄러) ──
-        market_choice = pre_args.market
-        scope         = pre_args.scope
+    if args.auto:
+        # ── 자동 실행 모드 (GitHub Actions / 작업 스케줄러) ──
+        market_choice = args.market
+        scope         = args.scope
         print(f"\n  🤖 자동 실행 모드  [{datetime.now().strftime('%Y-%m-%d %H:%M')}]")
         print(f"     시장: {'한국' if market_choice=='1' else '미국' if market_choice=='2' else '한국+미국'}")
         print(f"     범위: {'100개' if scope=='1' else '300개' if scope=='2' else '전체'}")
