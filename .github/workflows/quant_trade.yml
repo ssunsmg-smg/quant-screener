@@ -1,0 +1,85 @@
+name: 퀀트 자동매매 (장중 KIS 주문 전용)
+
+on:
+  # ── 매일 오전 10시 (KST = UTC+9 → UTC 01:00) ──
+  # 장 시작(09:00) 직후, 동시호가 혼란을 피해 10시로 설정
+  schedule:
+    - cron: '0 1 * * 1-5'   # 월~금 평일만 (주말 제외)
+
+  # ── 수동 실행 버튼 (테스트용) ──
+  workflow_dispatch:
+
+jobs:
+  kis-trade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # ① 레포지터리 체크아웃 (전날 커밋된 signals/ 폴더 포함)
+      - name: 레포지터리 체크아웃
+        uses: actions/checkout@v4
+
+      # ② Python 설치
+      - name: Python 3.11 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # ③ 패키지 설치
+      - name: 패키지 설치
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ④ signals/ 폴더의 가장 최근 매매신호 JSON을 작업 루트로 복사
+      #    (--trade-only 는 --output-dir 안의 매매신호_KR_*.json을 찾으므로)
+      - name: 매매신호 JSON 준비
+        run: |
+          if [ -z "$(ls -A signals/*.json 2>/dev/null)" ]; then
+            echo "❌ signals/ 폴더에 매매신호 JSON이 없습니다."
+            echo "   전날 스크리닝(quant_daily.yml)이 먼저 성공해야 합니다."
+            exit 1
+          fi
+          cp signals/매매신호_KR_*.json .
+          echo "▶ 신호 파일 준비 완료:"
+          ls -la 매매신호_KR_*.json
+
+      # ⑤ KIS 설정파일 생성 (secrets에서 읽어와 매 실행마다 생성)
+      #    ★ 모의투자 단계에서는 KIS_IS_REAL 시크릿을 "false"로 등록
+      - name: KIS 설정파일 생성
+        run: |
+          cat > kis_config.json << EOF
+          {
+            "app_key":          "${{ secrets.KIS_APP_KEY }}",
+            "app_secret":       "${{ secrets.KIS_APP_SECRET }}",
+            "account_no":       "${{ secrets.KIS_ACCOUNT_NO }}",
+            "is_real":          ${{ secrets.KIS_IS_REAL }},
+            "max_position_pct": 5.0,
+            "max_daily_trades": 10,
+            "stop_loss_pct":    8.0,
+            "take_profit_pct":  20.0
+          }
+          EOF
+          echo "▶ KIS 설정파일 생성 완료 (is_real=${{ secrets.KIS_IS_REAL }})"
+
+      # ⑥ KIS 자동매매 실행 (스크리닝 없이, 저장된 신호만 사용)
+      - name: KIS 자동매매 실행
+        run: |
+          python quant_screener_v36.py --trade-only --no-telegram --output-dir .
+          echo "▶ 실행 완료"
+
+      # ⑦ kis_config.json 삭제 (아티팩트에 절대 포함되지 않도록)
+      - name: KIS 설정파일 삭제
+        if: always()
+        run: rm -f kis_config.json
+
+      # ⑧ 거래로그 아티팩트 저장 (90일 보관 — 매매 기록은 길게)
+      - name: 📊 거래로그 저장
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: KIS거래로그-${{ github.run_number }}-${{ github.run_id }}
+          path: trades/*.json
+          retention-days: 90
+          if-no-files-found: warn
