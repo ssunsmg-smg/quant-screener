@@ -5779,6 +5779,8 @@ def parse_args():
     # v36 신규
     p.add_argument("--backtest",     action="store_true", help="백테스트 전용")
     p.add_argument("--trade",        action="store_true", help="KIS 자동매매 실행 (한국투자증권 REST API)")
+    p.add_argument("--trade-only",   action="store_true",
+                   help="스크리닝 없이 저장된 매매신호_KR_*.json만 읽어 KIS 주문 실행 (장중 별도 스케줄용)")
     p.add_argument("--monitor",      action="store_true", help="모니터링 전용")
     p.add_argument("--factor-model", action="store_true", help="Z-score 팩터모델 적용")
     p.add_argument("--no-telegram",  action="store_true", help="텔레그램 알림 비활성")
@@ -5828,6 +5830,77 @@ def _run_backtest(args):
                 f"승률: {s.get('승률(%)',0):.1f}%\n"
                 f"{s.get('과적합판단','')}"
             )
+
+
+def _find_latest_signal_json(output_dir: str) -> Optional[str]:
+    """output_dir 안에서 가장 최근(파일명 timestamp 기준) 매매신호_KR_*.json 찾기"""
+    candidates = [
+        f for f in os.listdir(output_dir)
+        if f.startswith("매매신호_KR_") and f.endswith(".json")
+    ]
+    if not candidates:
+        return None
+    # 파일명에 박힌 타임스탬프(YYYYMMDD_HHMMSS) 기준 내림차순 정렬
+    candidates.sort(reverse=True)
+    return os.path.join(output_dir, candidates[0])
+
+
+def _load_signal_json_as_df(json_path: str) -> pd.DataFrame:
+    """
+    save_signal_json_v36 으로 저장된 매매신호 JSON을 읽어
+    KISAutoTrader.execute_signals 가 기대하는 컬럼명의 DataFrame으로 복원.
+    인덱스 = 종목코드.
+    """
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    rows = {}
+    for s in data.get("top_stocks", []):
+        code = str(s.get("code", ""))
+        if not code:
+            continue
+        trading = s.get("trading", {})
+        rows[code] = {
+            "종목명":      s.get("name", ""),
+            "매매시그널":  trading.get("signal", ""),
+            "복합점수":    s.get("composite_score", 0),
+            "100점_합계":  s.get("score_100", {}).get("total", 0),
+            "괴리율(%)":   s.get("valuation", {}).get("upside_pct"),
+        }
+    return pd.DataFrame.from_dict(rows, orient="index")
+
+
+def _run_trade_only(args):
+    """
+    스크리닝 없이, 가장 최근에 저장된 매매신호_KR_*.json만 읽어서
+    KIS 자동매매(매수/손절/익절)만 실행.
+    장중 시간에 별도 스케줄로 돌리기 위한 진입점.
+    """
+    print("\n  [매매전용] 저장된 매매신호로 KIS 자동매매 실행")
+
+    json_path = _find_latest_signal_json(args.output_dir)
+    if not json_path:
+        print(f"  ⚠ {args.output_dir} 안에 매매신호_KR_*.json 파일이 없습니다.")
+        print("     먼저 스크리닝(--auto 또는 일반 실행)을 돌려 신호 파일을 생성하세요.")
+        sys.exit(1)
+
+    print(f"  [매매전용] 신호 파일: {os.path.basename(json_path)}")
+    df_top = _load_signal_json_as_df(json_path)
+    if df_top.empty:
+        print("  ⚠ 신호 파일에 유효한 종목이 없습니다.")
+        return
+
+    monitor = None if args.no_telegram else MonitorEngine()
+    trader  = KISAutoTrader()
+
+    bal       = trader.get_balance()
+    total_cap = bal.get("순자산", 10_000_000)
+    executed  = trader.execute_signals(df_top, total_cap)
+
+    if monitor and executed:
+        monitor.notify_trade(executed)
+
+    print(f"\n  ✅ 매매전용 실행 완료: {len(executed)}건")
 
 
 def _run_monitor(args):
@@ -5989,6 +6062,9 @@ def main():
         return
     if args.monitor:
         _run_monitor(args)
+        return
+    if args.trade_only:
+        _run_trade_only(args)
         return
 
     if args.auto:
