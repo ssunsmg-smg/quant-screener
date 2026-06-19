@@ -1436,6 +1436,29 @@ for _k, _ids in DART_ACCOUNTS.items():
 # 1. 공통 유틸
 # ══════════════════════════════════════════════════════════
 
+def _fmt(v, digits=2, suffix=""):
+    try:
+        if v is None or (isinstance(v, float) and np.isnan(v)):
+            return "N/A"
+        return f"{v:.{digits}f}{suffix}"
+    except Exception:
+        return "N/A"
+
+def _clamp(v, lo, hi):
+    """네이버 파싱값 이상치 필터: lo~hi 범위 밖이면 None 반환"""
+    if v is None:
+        return None
+    try:
+        fv = float(v)
+        if np.isnan(fv):
+            return None
+        return fv if lo <= fv <= hi else None
+    except Exception:
+        return None
+
+def percentile_rank(series: pd.Series) -> pd.Series:
+    return series.rank(pct=True) * 100
+
 def load_dart_key() -> str:
     # 항상 스크립트 폴더에 저장 (실행 위치 무관)
     key_file = os.path.join(BASE_DIR, "dart_api.txt")
