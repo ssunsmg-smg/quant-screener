@@ -1,9 +1,10 @@
-name: 퀀트 스크리너 매일 자동 실행
+name: 퀀트 스크리너 매일 자동 실행 (스크리닝 + KIS 모의투자)
 
 on:
   # ── 매일 오후 7시 (KST = UTC+9 → UTC 10:00) ──
+  # 정시(00분)는 GitHub Actions 부하가 몰려 지연/드롭될 수 있어 07분으로 분산
   schedule:
-    - cron: '0 10 * * 1-5'   # 월~금 평일만 (주말 제외)
+    - cron: '7 10 * * 1-5'   # 월~금 평일만 (주말 제외)
 
   # ── 수동 실행 버튼 (테스트용) ──
   workflow_dispatch:
@@ -12,6 +13,11 @@ on:
         description: '범위 선택 (1=100개 / 2=300개 / 3=전체)'
         required: false
         default: '2'
+      trade:
+        description: 'KIS 자동매매 실행 여부'
+        required: false
+        default: 'true'
+        type: boolean
 
 jobs:
   quant-scan:
@@ -40,19 +46,57 @@ jobs:
       - name: DART API 키 설정
         run: echo "${{ secrets.DART_API_KEY }}" > dart_api.txt
 
-      # ⑤ 퀀트 스크리너 실행 (v36 — 한국 전용, --market 옵션 없음)
-      - name: 퀀트 스크리너 실행
+      # ⑤ KIS 설정파일 생성 (모의투자 — secrets에서 읽어와 매 실행마다 생성)
+      #    ★ is_real 은 항상 secrets.KIS_IS_REAL 값을 그대로 사용
+      #      모의투자 단계에서는 이 secret을 "false"로 등록해 두세요.
+      - name: KIS 설정파일 생성
+        run: |
+          cat > kis_config.json << EOF
+          {
+            "app_key":          "${{ secrets.KIS_APP_KEY }}",
+            "app_secret":       "${{ secrets.KIS_APP_SECRET }}",
+            "account_no":       "${{ secrets.KIS_ACCOUNT_NO }}",
+            "is_real":          ${{ secrets.KIS_IS_REAL }},
+            "max_position_pct": 5.0,
+            "max_daily_trades": 10,
+            "stop_loss_pct":    8.0,
+            "take_profit_pct":  20.0
+          }
+          EOF
+          echo "▶ KIS 설정파일 생성 완료 (is_real=${{ secrets.KIS_IS_REAL }})"
+
+      # ⑥ 퀀트 스크리너 실행 + KIS 자동매매
+      - name: 퀀트 스크리너 + 자동매매 실행
+        env:
+          TRADE_INPUT: ${{ github.event.inputs.trade }}
         run: |
           SCOPE="${{ github.event.inputs.scope || '2' }}"
-          echo "▶ 스크리닝 범위: ${SCOPE} (1=100개 / 2=300개 / 3=전체)"
+
+          # workflow_dispatch가 아닌 schedule 실행이면 TRADE_INPUT이 빈 문자열 → 기본 true 처리
+          TRADE_VALUE="${TRADE_INPUT:-true}"
+
+          TRADE_FLAG=""
+          if [ "${TRADE_VALUE}" = "true" ]; then
+            TRADE_FLAG="--trade"
+          fi
+
+          echo "▶ 스크리닝 범위: ${SCOPE}"
+          echo "▶ trade 입력값: '${TRADE_VALUE}' → 자동매매: ${TRADE_FLAG:-비활성}"
+
           python quant_screener_v36.py \
             --auto \
             --scope "${SCOPE}" \
             --no-cache \
-            --no-telegram
-          echo "▶ 실행 완료"
+            --no-telegram \
+            ${TRADE_FLAG}
+          echo "▶ 실행 완료 (TRADE_FLAG=${TRADE_FLAG:-없음})"
 
-      # ⑥ 엑셀 + JSON 아티팩트 저장 (30일 보관)
+      # ⑦ kis_config.json 삭제 (아티팩트에 절대 포함되지 않도록)
+      - name: KIS 설정파일 삭제
+        if: always()
+        run: rm -f kis_config.json dart_api.txt
+
+      # ⑧ 엑셀 + JSON + 거래로그 아티팩트 저장 (30일 보관)
       - name: 📊 결과 파일 저장
         if: always()
         uses: actions/upload-artifact@v4
@@ -61,5 +105,6 @@ jobs:
           path: |
             quant_*.xlsx
             매매신호_*.json
+            trades/*.json
           retention-days: 30
           if-no-files-found: warn
