@@ -1,0 +1,13 @@
+{
+  "app_key": "PS5BFMraDVxDDpDxaq5WL8xLjKE36x5BQ4n5",
+  "app_secret": "KfrxgGkL8kWRL4p/plDdAa4ctCUKyr32j3ltQWymgaZJJ+ydkW3Qmu7TNQkyOPG0sNjssxHX+Q71VdLjSHNjAgEHKMUp5s21J6oc1mRAOhvKu0Nu1U/AKNbB1BnB5KyuLIv9xsuQX0FKNaGsOK/Z8i7VSzMwTC2oBRfTVyMa3Mi7GNAPqOw=",
+  "account_no": "50194065",
+  "is_real": false,
+  "max_daily_trades": 10,
+  "stop_loss_pct": 7,
+  "take_profit_min_pct": 2,
+  "take_profit_max_pct": 25,
+  "base_invest_amount": 10000000,
+  "reinvest_mode": true
+  "buy_top_n": 20  
+}
