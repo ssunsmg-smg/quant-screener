@@ -35,12 +35,58 @@ from quant_screener_v41f import (
     _find_latest_signal_json, _load_signal_json_as_df,
 )
 from kis_intraday import KISIntraday
-from signal_engine import evaluate_entry_gate
+from signal_engine import evaluate_entry_gate, evaluate_entry_gate_multi, DEFAULT_MIN_CANDLES
 import data_logger
 
 PENDING_PATH_TMPL = os.path.join(TRADE_DIR, "intraday_pending_{date}.json")
 MAX_TRIES_PER_STOCK = 30          # 하루 최대 재시도 횟수 (너무 오래 들고 있지 않도록)
 CUTOFF_HOUR_MIN = (14, 50)        # 이 시각 이후엔 신규 매수 시도 중단 (장 마감 대비 여유)
+
+# ── 분봉 게이트 설정 ──
+# GATE_INTERVALS: 체크할 분봉 목록. 기본은 기존과 동일하게 1분봉 단독.
+#   --multi-tf 옵션을 주면 5/10/15/30/60분봉도 같이 평가해서 로그에 남기고,
+#   GATE_MODE에 따라 실제 매수 판단에도 반영한다.
+# GATE_MODE: "single"      = 1분봉 결과만으로 매수 판단 (기존 동작, 기본값)
+#            "all_pass"    = 평가 가능한 모든 분봉이 전부 통과해야 매수 (가장 엄격)
+#            "majority"    = 평가 가능한 분봉 중 과반수가 통과하면 매수
+GATE_INTERVALS_DEFAULT = (1, 5, 10, 15, 30, 60)
+
+# ── 수동 관리하는 한국 휴장일 목록 (2026년, KRX 공식 일정 기준) ──
+# 형식: "YYYYMMDD". 주말은 별도로 자동 체크하니 여기엔 주중 공휴일/임시휴장일만 추가.
+# ⚠ 출처는 2차 정리 자료라, 실거래 전에 한국거래소(KRX) 공식 공지로 한 번 더 대조 권장.
+#   연도가 바뀌면 이 목록도 매년 갱신해야 함.
+KRX_HOLIDAYS = {
+    "20260101",  # 신정
+    "20260216",  # 설날
+    "20260217",  # 설날
+    "20260218",  # 설날
+    "20260302",  # 삼일절 대체휴일
+    "20260501",  # 근로자의날
+    "20260505",  # 어린이날
+    "20260525",  # 석가탄신일 대체휴일
+    "20260603",  # 임시공휴일
+    "20260717",  # 제헌절 (※ 실제로는 비거래일 아닌 경우도 있어 KRX 공지로 재확인 권장)
+    "20260817",  # 광복절 대체휴일
+    "20260924",  # 추석
+    "20260925",  # 추석
+    "20261005",  # 개천절 대체휴일
+    "20261009",  # 한글날
+    "20261225",  # 성탄절
+    "20261231",  # 연말휴장일
+}
+
+
+def _is_trading_day(now: datetime = None) -> bool:
+    """주말(토/일) + 수동 휴장일 목록 기준으로 '오늘이 실제 거래일인지' 판단.
+    ⚠ KIS 분봉 API는 휴장일에도 직전 거래일 데이터를 '정상 데이터'처럼 돌려주므로
+      (빈 데이터로 휴장 여부를 판단할 수 없음이 실측으로 확인됨),
+      반드시 이 함수로 사전에 막아야 한다."""
+    now = now or datetime.now()
+    if now.weekday() >= 5:   # 5=토, 6=일
+        return False
+    if now.strftime("%Y%m%d") in KRX_HOLIDAYS:
+        return False
+    return True
 
 
 def _today_str() -> str:
@@ -82,6 +128,12 @@ def _already_held(trader: KISIntraday, code: str) -> bool:
 def run(args):
     date_str = _today_str()
     print(f"\n  [시그널체크] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} 실행")
+
+    if not _is_trading_day():
+        print(f"  🚫 오늘({datetime.now().strftime('%Y-%m-%d (%a)')})은 거래일이 아닙니다 — 매수 시도 안 함")
+        print("     (KIS 분봉 API는 휴장일에도 직전 거래일 데이터를 정상처럼 돌려주므로,")
+        print("      이 가드 없이는 휴장일 데이터로 잘못 매수할 위험이 있음)")
+        return
 
     if _past_cutoff():
         print(f"  ⏰ 컷오프 시각({CUTOFF_HOUR_MIN[0]:02d}:{CUTOFF_HOUR_MIN[1]:02d}) 이후 — 신규 매수 시도 안 함")
@@ -141,9 +193,30 @@ def run(args):
             print(f"  ℹ {code} 이미 보유 중 → 스킵")
             continue
 
-        df_min = trader.get_minute_chart(code, lookback_calls=2)
-        time.sleep(0.4)   # KIS rate limit 여유
-        gate = evaluate_entry_gate(df_min, direction="BUY")
+        if args.multi_tf:
+            charts = trader.get_minute_chart_multi(code, intervals=GATE_INTERVALS_DEFAULT)
+            time.sleep(0.4)
+            multi = evaluate_entry_gate_multi(charts, direction="BUY")
+            if args.gate_mode == "all_pass":
+                gate_pass = multi["all_pass"]
+            elif args.gate_mode == "majority":
+                gate_pass = multi["majority_pass"]
+            else:  # "single" — 1분봉 결과만으로 판단 (멀티는 로그만)
+                gate_pass = multi["by_interval"].get(1, {}).get("pass", False)
+            gate = multi["by_interval"].get(1, {"pass": gate_pass, "checks": {}, "detail": {}})
+            gate["pass"] = gate_pass   # 위에서 정한 모드 기준으로 최종 통과여부 덮어씀
+            gate["multi_detail"] = {
+                "mode": args.gate_mode,
+                "passed_intervals": multi["passed_intervals"],
+                "failed_intervals": multi["failed_intervals"],
+                "pass_count": f"{multi['pass_count']}/{multi['total_count']}",
+            }
+            df_min = charts.get(1, pd.DataFrame())   # 로깅용 (기존 코드와의 호환)
+        else:
+            df_min = trader.get_minute_chart(code, interval=args.interval, lookback_calls=2)
+            time.sleep(0.4)   # KIS rate limit 여유
+            gate = evaluate_entry_gate(df_min, direction="BUY",
+                                        min_candles=DEFAULT_MIN_CANDLES.get(args.interval, 10))
         rec["tries"] = rec.get("tries", 0) + 1
         rec["last_check"] = datetime.now().strftime("%H:%M:%S")
         rec["last_detail"] = gate.get("detail", {})
@@ -181,7 +254,12 @@ def run(args):
                 print(f"  ⚠ {code} 게이트 통과했지만 주문 실패: {r.get('msg','')}")
         else:
             failed = [k for k, v in gate["checks"].items() if not v]
-            print(f"  ⏳ {code} 게이트 미통과 (실패: {', '.join(failed)}) — {rec['tries']}회차, 재시도 대기")
+            extra = ""
+            if args.multi_tf:
+                md = gate.get("multi_detail", {})
+                extra = (f" | 멀티분봉({md.get('mode')}): 통과 {md.get('pass_count')} "
+                         f"통과분봉={md.get('passed_intervals')} 실패분봉={md.get('failed_intervals')}")
+            print(f"  ⏳ {code} 게이트 미통과 (실패: {', '.join(failed)}) — {rec['tries']}회차, 재시도 대기{extra}")
 
         cands_state[code] = rec
 
@@ -204,5 +282,14 @@ def run(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="장중 L1+L2 시그널 게이트 체크 → KIS 매수")
     parser.add_argument("--output-dir", type=str, default=BASE_DIR)
+    parser.add_argument("--interval", type=int, choices=[1, 3, 5, 10, 15, 30, 60], default=5,
+                         help="--multi-tf를 안 쓸 때 기준으로 삼을 분봉 주기 (기본: 5분)")
+    parser.add_argument("--multi-tf", action="store_true",
+                         help="기준 분봉(--interval) 단독 대신 1/5/10/15/30/60분봉을 모두 같이 평가 (기본: 끔)")
+    parser.add_argument("--gate-mode", choices=["single", "all_pass", "majority"], default="single",
+                         help="--multi-tf 켰을 때 최종 매수판단 기준. "
+                              "single=1분봉 결과만 사용(멀티는 로그용), "
+                              "all_pass=평가된 분봉 전부 통과해야 매수, "
+                              "majority=과반수 통과시 매수 (기본: single)")
     args = parser.parse_args()
     run(args)
