@@ -1,0 +1,1234 @@
+{
+  "scan_date": "2026-07-22",
+  "scan_time": "10:10",
+  "screener": "QuantScreener_v6.3.0_KR",
+  "top_stocks": [
+    {
+      "rank": 1,
+      "code": "278470",
+      "name": "에이피알",
+      "market": "KOSPI",
+      "sector": "화장품",
+      "price": 357500,
+      "composite_score": 81.2,
+      "grade": "◆◆  A  우수",
+      "score_100": {
+        "total": 98.0,
+        "grade": "★★★★★ 최상급",
+        "수익성": 20,
+        "성장성": 20,
+        "재무안정": 19,
+        "현금흐름": 20,
+        "밸류에이션": 3,
+        "주주친화": 8,
+        "정성보정": 8
+      },
+      "health_check": {
+        "cfo_positive": "+3410.5억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "73% ✅",
+        "roe_ok": "65.0% ✅",
+        "per_ok": "30.0x ❌"
+      },
+      "trading": {
+        "signal": "▼▼ 매도 검토",
+        "position_diag": "🟥 고평가구간 (매도 검토)",
+        "price_band": {
+          "strong_buy": 339625,
+          "buy": 357500,
+          "target_1": 393250.0,
+          "target_2": 429000.0,
+          "overbought": 464750.0,
+          "stop_loss": 303875
+        },
+        "strategy": "손절선(303,875원) 이탈 시 즉시 매도 | 기술:▲ 매수",
+        "key_points": "6개월 모멘텀 강함 (+51%)",
+        "risk_flags": "없음",
+        "bonus_reason": "독점적 해자(OPM 75%·ROE 65%), 고성장(매출+111%)",
+        "malus_reason": "-"
+      },
+      "fundamentals": {
+        "pbr": 19.4,
+        "roe": 64.97418944233759,
+        "div": 2.2,
+        "debt_ratio": 73.1130272016996,
+        "interest_coverage": 11.78208196387422,
+        "cfo": 341046397295.0,
+        "fcf": 246584885522.0
+      },
+      "valuation": {
+        "per_target": 270408.0,
+        "pbr_target": null,
+        "graham_target": null,
+        "avg_target": 270408.0,
+        "upside_pct": -24.4
+      }
+    },
+    {
+      "rank": 2,
+      "code": "000660",
+      "name": "SK하이닉스",
+      "market": "KOSPI",
+      "sector": "반도체와반도체장비",
+      "price": 1830000,
+      "composite_score": 79.6,
+      "grade": "◆◆  A  우수",
+      "score_100": {
+        "total": 95.0,
+        "grade": "★★★★★ 최상급",
+        "수익성": 20,
+        "성장성": 20,
+        "재무안정": 17,
+        "현금흐름": 18,
+        "밸류에이션": 6,
+        "주주친화": 4,
+        "정성보정": 10
+      },
+      "health_check": {
+        "cfo_positive": "+533731.3억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "46% ✅",
+        "roe_ok": "35.6% ✅",
+        "per_ok": "11.0x ✅"
+      },
+      "trading": {
+        "signal": "▼▼ 매도 검토",
+        "position_diag": "🟥 고평가구간 (매도 검토)",
+        "price_band": {
+          "strong_buy": 1738500,
+          "buy": 1830000,
+          "target_1": 2013000.0,
+          "target_2": 2196000.0,
+          "overbought": 2379000.0,
+          "stop_loss": 1555500
+        },
+        "strategy": "손절선(1,555,500원) 이탈 시 즉시 매도 | 기술:▼ 매도",
+        "key_points": "6개월 모멘텀 강함 (+145%)",
+        "risk_flags": "없음",
+        "bonus_reason": "독점적 해자(OPM 44%·ROE 36%), 성장산업(반도체와반도체장비)",
+        "malus_reason": "-"
+      },
+      "fundamentals": {
+        "pbr": 3.79,
+        "roe": 35.59215910271754,
+        "div": 0.46,
+        "debt_ratio": 45.94547175634156,
+        "interest_coverage": 3.7749961255491606,
+        "cfo": 53373126000000.0,
+        "fcf": 5318875000000.0
+      },
+      "valuation": {
+        "per_target": 1544644.0,
+        "pbr_target": null,
+        "graham_target": 480980.0,
+        "avg_target": 1299183.0,
+        "upside_pct": -29.0
+      }
+    },
+    {
+      "rank": 3,
+      "code": "005850",
+      "name": "에스엘",
+      "market": "KOSPI",
+      "sector": "자동차부품",
+      "price": 54200,
+      "composite_score": 77.2,
+      "grade": "◆◆  A  우수",
+      "score_100": {
+        "total": 87.0,
+        "grade": "★★★★  우수",
+        "수익성": 17,
+        "성장성": 13,
+        "재무안정": 19,
+        "현금흐름": 19,
+        "밸류에이션": 9,
+        "주주친화": 10,
+        "정성보정": 0
+      },
+      "health_check": {
+        "cfo_positive": "+5085.4억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "51% ✅",
+        "roe_ok": "12.1% ✅",
+        "per_ok": "6.4x ✅"
+      },
+      "trading": {
+        "signal": "■■ 매수",
+        "position_diag": "🟩 매수구간 (적정가 대비 5~20% 저평가)",
+        "price_band": {
+          "strong_buy": 51490,
+          "buy": 54200,
+          "target_1": 58528.0,
+          "target_2": 67307.0,
+          "overbought": 70234.0,
+          "stop_loss": 46070
+        },
+        "strategy": "매수 진입 | 1차목표가 58,528원 도달 시 30% 익절 | 손절 46,070원 | 기술:▼ 매도",
+        "key_points": "배당수익률 6.5% (안정적 인컴) / 6개월 모멘텀 강함 (+20%) / FCF Yield 10.6% (현금창출력 우수)",
+        "risk_flags": "없음",
+        "bonus_reason": "-",
+        "malus_reason": "-"
+      },
+      "fundamentals": {
+        "pbr": 0.77,
+        "roe": 12.097707870552409,
+        "div": 6.46,
+        "debt_ratio": 50.73858899854958,
+        "interest_coverage": 27.90938464084744,
+        "cfo": 508540930109.0,
+        "fcf": 212474568962.0
+      },
+      "valuation": {
+        "per_target": 59519.0,
+        "pbr_target": 57113.0,
+        "graham_target": 93132.0,
+        "avg_target": 58528.0,
+        "upside_pct": 8.0
+      }
+    },
+    {
+      "rank": 4,
+      "code": "192080",
+      "name": "더블유게임즈",
+      "market": "KOSPI",
+      "sector": "게임엔터테인먼트",
+      "price": 59900,
+      "composite_score": 76.7,
+      "grade": "◆◆  A  우수",
+      "score_100": {
+        "total": 92.0,
+        "grade": "★★★★★ 최상급",
+        "수익성": 17,
+        "성장성": 16,
+        "재무안정": 19,
+        "현금흐름": 20,
+        "밸류에이션": 9,
+        "주주친화": 10,
+        "정성보정": 1
+      },
+      "health_check": {
+        "cfo_positive": "+2369.3억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "12% ✅",
+        "roe_ok": "10.9% ✅",
+        "per_ok": "8.8x ✅"
+      },
+      "trading": {
+        "signal": "■■ 매수",
+        "position_diag": "🟩 매수구간 (적정가 대비 20~40% 저평가)",
+        "price_band": {
+          "strong_buy": 56905,
+          "buy": 59900,
+          "target_1": 75138.0,
+          "target_2": 86409.0,
+          "overbought": 90166.0,
+          "stop_loss": 50915
+        },
+        "strategy": "매수 진입 | 1차목표가 75,138원 도달 시 30% 익절 | 손절 50,915원 | 기술:▼ 매도",
+        "key_points": "적정가 대비 25% 저평가 / 6개월 모멘텀 강함 (+18%) / FCF Yield 10.4% (현금창출력 우수)",
+        "risk_flags": "없음",
+        "bonus_reason": "안정성장(매출+14%)",
+        "malus_reason": "-"
+      },
+      "fundamentals": {
+        "pbr": 0.87,
+        "roe": 10.882032298197876,
+        "div": 2.24,
+        "debt_ratio": 11.831440725678357,
+        "interest_coverage": 9.979955719721866,
+        "cfo": 236934156311.0,
+        "fcf": 104177008368.0
+      },
+      "valuation": {
+        "per_target": 67851.0,
+        "pbr_target": 71788.0,
+        "graham_target": 107247.0,
+        "avg_target": 75138.0,
+        "upside_pct": 25.4
+      }
+    },
+    {
+      "rank": 5,
+      "code": "000270",
+      "name": "기아",
+      "market": "KOSPI",
+      "sector": "자동차",
+      "price": 146800,
+      "composite_score": 75.4,
+      "grade": "◆◆  A  우수",
+      "score_100": {
+        "total": 86.0,
+        "grade": "★★★★  우수",
+        "수익성": 17,
+        "성장성": 13,
+        "재무안정": 18,
+        "현금흐름": 19,
+        "밸류에이션": 9,
+        "주주친화": 10,
+        "정성보정": 0
+      },
+      "health_check": {
+        "cfo_positive": "+90541.4억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "62% ✅",
+        "roe_ok": "12.3% ✅",
+        "per_ok": "6.4x ✅"
+      },
+      "trading": {
+        "signal": "■■ 매수",
+        "position_diag": "🟩 매수구간 (적정가 대비 5~20% 저평가)",
+        "price_band": {
+          "strong_buy": 139460,
+          "buy": 146800,
+          "target_1": 161952.0,
+          "target_2": 186245.0,
+          "overbought": 194342.0,
+          "stop_loss": 124780
+        },
+        "strategy": "매수 진입 | 1차목표가 161,952원 도달 시 30% 익절 | 손절 124,780원 | 기술:▲ 매수",
+        "key_points": "배당수익률 5.6% (안정적 인컴) / FCF Yield 7.2% (현금창출력 우수)",
+        "risk_flags": "없음",
+        "bonus_reason": "-",
+        "malus_reason": "-"
+      },
+      "fundamentals": {
+        "pbr": 0.77,
+        "roe": 12.345345183197173,
+        "div": 5.58,
+        "debt_ratio": 61.755686310860455,
+        "interest_coverage": 15.716362201016578,
+        "cfo": 9054140000000.0,
+        "fcf": 4094248000000.0
+      },
+      "valuation": {
+        "per_target": 165649.0,
+        "pbr_target": 156670.0,
+        "graham_target": 261457.0,
+        "avg_target": 161952.0,
+        "upside_pct": 10.3
+      }
+    },
+    {
+      "rank": 6,
+      "code": "042700",
+      "name": "한미반도체",
+      "market": "KOSPI",
+      "sector": "반도체와반도체장비",
+      "price": 215000,
+      "composite_score": 72.3,
+      "grade": "◆   B  양호",
+      "score_100": {
+        "total": 83.0,
+        "grade": "★★★★  우수",
+        "수익성": 20,
+        "성장성": 7,
+        "재무안정": 20,
+        "현금흐름": 20,
+        "밸류에이션": 0,
+        "주주친화": 6,
+        "정성보정": 10
+      },
+      "health_check": {
+        "cfo_positive": "+2286.3억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "18% ✅",
+        "roe_ok": "31.0% ✅",
+        "per_ok": "57.0x ❌"
+      },
+      "trading": {
+        "signal": "─ 보유",
+        "position_diag": "N/A",
+        "price_band": {
+          "strong_buy": 204250,
+          "buy": 215000,
+          "target_1": null,
+          "target_2": null,
+          "overbought": null,
+          "stop_loss": 182750
+        },
+        "strategy": "적정가(N/A) 이미 하회 중 — 추가매수 자제, 손절 182,750원 확인 | 기술:▲ 매수",
+        "key_points": "52주 저점 근처 (39%) / 6개월 모멘텀 강함 (+20%)",
+        "risk_flags": "없음",
+        "bonus_reason": "독점적 해자(OPM 35%·ROE 31%), 성장산업(반도체와반도체장비)",
+        "malus_reason": "-"
+      },
+      "fundamentals": {
+        "pbr": 17.51,
+        "roe": 31.000871666616163,
+        "div": 0.63,
+        "debt_ratio": 17.818224408248764,
+        "interest_coverage": 24.385351794371605,
+        "cfo": 228626759780.0,
+        "fcf": 210302922680.0
+      },
+      "valuation": {
+        "per_target": null,
+        "pbr_target": null,
+        "graham_target": null,
+        "avg_target": null,
+        "upside_pct": null
+      }
+    },
+    {
+      "rank": 7,
+      "code": "005930",
+      "name": "삼성전자",
+      "market": "KOSPI",
+      "sector": "반도체와반도체장비",
+      "price": 260500,
+      "composite_score": 72.3,
+      "grade": "◆   B  양호",
+      "score_100": {
+        "total": 84.0,
+        "grade": "★★★★  우수",
+        "수익성": 17,
+        "성장성": 14,
+        "재무안정": 18,
+        "현금흐름": 19,
+        "밸류에이션": 3,
+        "주주친화": 8,
+        "정성보정": 5
+      },
+      "health_check": {
+        "cfo_positive": "+853151.5억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "30% ✅",
+        "roe_ok": "10.4% ✅",
+        "per_ok": "18.3x ⚠"
+      },
+      "trading": {
+        "signal": "▼▼ 매도 검토",
+        "position_diag": "🟥 고평가구간 (매도 검토)",
+        "price_band": {
+          "strong_buy": 247475,
+          "buy": 260500,
+          "target_1": 286550.0,
+          "target_2": 312600.0,
+          "overbought": 338650.0,
+          "stop_loss": 221425
+        },
+        "strategy": "손절선(221,425원) 이탈 시 즉시 매도",
+        "key_points": "6개월 모멘텀 강함 (+81%)",
+        "risk_flags": "없음",
+        "bonus_reason": "성장산업(반도체와반도체장비)",
+        "malus_reason": "-"
+      },
+      "fundamentals": {
+        "pbr": 1.87,
+        "roe": 10.360920902937423,
+        "div": 1.39,
+        "debt_ratio": 29.93712690499687,
+        "interest_coverage": 3.715862275736925,
+        "cfo": 85315148000000.0,
+        "fcf": 16802942000000.0
+      },
+      "valuation": {
+        "per_target": 120822.0,
+        "pbr_target": null,
+        "graham_target": 98915.0,
+        "avg_target": 115767.0,
+        "upside_pct": -55.6
+      }
+    },
+    {
+      "rank": 8,
+      "code": "443060",
+      "name": "HD현대마린솔루션",
+      "market": "KOSPI",
+      "sector": "조선",
+      "price": 200500,
+      "composite_score": 72.2,
+      "grade": "◆   B  양호",
+      "score_100": {
+        "total": 83.0,
+        "grade": "★★★★  우수",
+        "수익성": 20,
+        "성장성": 10,
+        "재무안정": 18,
+        "현금흐름": 20,
+        "밸류에이션": 0,
+        "주주친화": 9,
+        "정성보정": 6
+      },
+      "health_check": {
+        "cfo_positive": "+3241.3억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "54% ✅",
+        "roe_ok": "32.7% ✅",
+        "per_ok": "32.2x ❌"
+      },
+      "trading": {
+        "signal": "▼▼ 매도 검토",
+        "position_diag": "🟥 고평가구간 (매도 검토)",
+        "price_band": {
+          "strong_buy": 190475,
+          "buy": 200500,
+          "target_1": 220550.0,
+          "target_2": 240600.0,
+          "overbought": 260650.0,
+          "stop_loss": 170425
+        },
+        "strategy": "손절선(170,425원) 이탈 시 즉시 매도 | 기술:▼ 매도",
+        "key_points": "52주 저점 근처 (34%)",
+        "risk_flags": "없음",
+        "bonus_reason": "독점적 해자(OPM 34%·ROE 33%), 안정성장(매출+14%)",
+        "malus_reason": "-"
+      },
+      "fundamentals": {
+        "pbr": 10.52,
+        "roe": 32.68620878099139,
+        "div": 2.04,
+        "debt_ratio": 54.27206423638181,
+        "interest_coverage": 5.775020849421283,
+        "cfo": 324127754474.0,
+        "fcf": 302806607079.0
+      },
+      "valuation": {
+        "per_target": 102221.0,
+        "pbr_target": null,
+        "graham_target": 49889.0,
+        "avg_target": 90144.0,
+        "upside_pct": -55.0
+      }
+    },
+    {
+      "rank": 9,
+      "code": "086280",
+      "name": "현대글로비스",
+      "market": "KOSPI",
+      "sector": "항공화물운송과물류",
+      "price": 194800,
+      "composite_score": 72.2,
+      "grade": "◆   B  양호",
+      "score_100": {
+        "total": 85.0,
+        "grade": "★★★★  우수",
+        "수익성": 20,
+        "성장성": 9,
+        "재무안정": 19,
+        "현금흐름": 19,
+        "밸류에이션": 7,
+        "주주친화": 10,
+        "정성보정": 1
+      },
+      "health_check": {
+        "cfo_positive": "+25007.6억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "79% ✅",
+        "roe_ok": "16.7% ✅",
+        "per_ok": "7.8x ✅"
+      },
+      "trading": {
+        "signal": "■ 관심/비중확대",
+        "position_diag": "🟩 매수구간 (적정가 대비 5~20% 저평가)",
+        "price_band": {
+          "strong_buy": 185060,
+          "buy": 194800,
+          "target_1": 208702.0,
+          "target_2": 240007.0,
+          "overbought": 250442.0,
+          "stop_loss": 165580
+        },
+        "strategy": "소량 선취매 후 추가 확인 | 목표 208,702원",
+        "key_points": "배당수익률 3.2% (안정적 인컴) / 52주 저점 근처 (38%) / FCF Yield 6.8% (현금창출력 우수)",
+        "risk_flags": "🟡 Altman낮음(Z=1.7, 이자보상·FCF 양호)",
+        "bonus_reason": "양호한 수익성(OPM 18%·ROE 17%)",
+        "malus_reason": "Altman낮음(Z=1.7, 단 이자보상·FCF 양호)"
+      },
+      "fundamentals": {
+        "pbr": 1.31,
+        "roe": 16.698320299119544,
+        "div": 3.21,
+        "debt_ratio": 78.92191369719413,
+        "interest_coverage": 12.068890006237472,
+        "cfo": 2500761317215.0,
+        "fcf": 957248394232.0
+      },
+      "valuation": {
+        "per_target": 227798.0,
+        "pbr_target": 155840.0,
+        "graham_target": 268395.0,
+        "avg_target": 208702.0,
+        "upside_pct": 7.1
+      }
+    },
+    {
+      "rank": 10,
+      "code": "073240",
+      "name": "금호타이어",
+      "market": "KOSPI",
+      "sector": "자동차부품",
+      "price": 6110,
+      "composite_score": 71.4,
+      "grade": "◆   B  양호",
+      "score_100": {
+        "total": 77.0,
+        "grade": "★★★   양호",
+        "수익성": 20,
+        "성장성": 10,
+        "재무안정": 13,
+        "현금흐름": 19,
+        "밸류에이션": 9,
+        "주주친화": 5,
+        "정성보정": 1
+      },
+      "health_check": {
+        "cfo_positive": "+9153.0억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "147% ✅",
+        "roe_ok": "16.8% ✅",
+        "per_ok": "4.8x ✅"
+      },
+      "trading": {
+        "signal": "■ 관심/비중확대",
+        "position_diag": "🟩 매수구간 (적정가 대비 20~40% 저평가)",
+        "price_band": {
+          "strong_buy": 5804,
+          "buy": 6110,
+          "target_1": 8212.0,
+          "target_2": 9444.0,
+          "overbought": 9854.0,
+          "stop_loss": 5194
+        },
+        "strategy": "소량 선취매 후 추가 확인 | 목표 8,212원",
+        "key_points": "적정가 대비 34% 저평가 / FCF Yield 71.9% (현금창출력 우수)",
+        "risk_flags": "🟡 Altman낮음(Z=1.2, 이자보상·FCF 양호)",
+        "bonus_reason": "양호한 수익성(OPM 19%·ROE 17%)",
+        "malus_reason": "Altman낮음(Z=1.2, 단 이자보상·FCF 양호)"
+      },
+      "fundamentals": {
+        "pbr": 0.83,
+        "roe": 16.82993477798585,
+        "div": 0.0,
+        "debt_ratio": 147.4440711013242,
+        "interest_coverage": 5.795707117220542,
+        "cfo": 915296220859.0,
+        "fcf": 719201025235.0
+      },
+      "valuation": {
+        "per_target": 8506.0,
+        "pbr_target": 7793.0,
+        "graham_target": 14566.0,
+        "avg_target": 8212.0,
+        "upside_pct": 34.4
+      }
+    },
+    {
+      "rank": 11,
+      "code": "271560",
+      "name": "오리온",
+      "market": "KOSPI",
+      "sector": "식품",
+      "price": 128600,
+      "composite_score": 71.0,
+      "grade": "◆   B  양호",
+      "score_100": {
+        "total": 74.0,
+        "grade": "★★★   양호",
+        "수익성": 16,
+        "성장성": 13,
+        "재무안정": 18,
+        "현금흐름": 15,
+        "밸류에이션": 7,
+        "주주친화": 6,
+        "정성보정": -1
+      },
+      "health_check": {
+        "cfo_positive": "+5373.3억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "18% ✅",
+        "roe_ok": "10.0% ⚠",
+        "per_ok": "10.9x ✅"
+      },
+      "trading": {
+        "signal": "▽ 비중축소",
+        "position_diag": "🟨 소폭고평가 (비중축소 고려)",
+        "price_band": {
+          "strong_buy": 122170,
+          "buy": 128600,
+          "target_1": 141460.0,
+          "target_2": 154320.0,
+          "overbought": 167180.0,
+          "stop_loss": 109310
+        },
+        "strategy": "추가 매수 자제, 기존 보유분 30~50% 정리 | 손절 109,310원",
+        "key_points": "배당수익률 3.3% (안정적 인컴) / 6개월 모멘텀 강함 (+23%)",
+        "risk_flags": "없음",
+        "bonus_reason": "-",
+        "malus_reason": "FCF음수(단기, 이자보상 OK)"
+      },
+      "fundamentals": {
+        "pbr": 1.1,
+        "roe": 9.984071728700531,
+        "div": 3.31,
+        "debt_ratio": 17.546518555070804,
+        "interest_coverage": null,
+        "cfo": 537328134910.0,
+        "fcf": -26891735476.0
+      },
+      "valuation": {
+        "per_target": 109310.0,
+        "pbr_target": 102880.0,
+        "graham_target": 146812.0,
+        "avg_target": 112685.0,
+        "upside_pct": -12.4
+      }
+    },
+    {
+      "rank": 12,
+      "code": "081660",
+      "name": "미스토홀딩스",
+      "market": "KOSPI",
+      "sector": "섬유,의류,신발,호화품",
+      "price": 45000,
+      "composite_score": 70.8,
+      "grade": "◆   B  양호",
+      "score_100": {
+        "total": 72.0,
+        "grade": "★★★   양호",
+        "수익성": 17,
+        "성장성": 8,
+        "재무안정": 14,
+        "현금흐름": 19,
+        "밸류에이션": 5,
+        "주주친화": 9,
+        "정성보정": 0
+      },
+      "health_check": {
+        "cfo_positive": "+5674.0억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "113% ✅",
+        "roe_ok": "13.4% ✅",
+        "per_ok": "11.4x ✅"
+      },
+      "trading": {
+        "signal": "■ 관심/비중확대",
+        "position_diag": "🟩 매수구간 (적정가 대비 5~20% 저평가)",
+        "price_band": {
+          "strong_buy": 42750,
+          "buy": 45000,
+          "target_1": 48512.0,
+          "target_2": 55789.0,
+          "overbought": 58214.0,
+          "stop_loss": 38250
+        },
+        "strategy": "소량 선취매 후 추가 확인 | 목표 48,512원",
+        "key_points": "배당수익률 4.6% (안정적 인컴) / FCF Yield 16.7% (현금창출력 우수)",
+        "risk_flags": "🟡 Altman낮음(Z=1.6, 이자보상·FCF 양호)",
+        "bonus_reason": "-",
+        "malus_reason": "-"
+      },
+      "fundamentals": {
+        "pbr": 1.17,
+        "roe": 13.43723017469595,
+        "div": 4.64,
+        "debt_ratio": 112.73346736106167,
+        "interest_coverage": 2.791207343439657,
+        "cfo": 567404562642.0,
+        "fcf": 334166335036.0
+      },
+      "valuation": {
+        "per_target": 38250.0,
+        "pbr_target": 55327.0,
+        "graham_target": 66820.0,
+        "avg_target": 48512.0,
+        "upside_pct": 7.8
+      }
+    },
+    {
+      "rank": 13,
+      "code": "001800",
+      "name": "오리온홀딩스",
+      "market": "KOSPI",
+      "sector": "식품",
+      "price": 25100,
+      "composite_score": 70.6,
+      "grade": "◆   B  양호",
+      "score_100": {
+        "total": 66.0,
+        "grade": "★★    보통",
+        "수익성": 11,
+        "성장성": 10,
+        "재무안정": 18,
+        "현금흐름": 15,
+        "밸류에이션": 7,
+        "주주친화": 6,
+        "정성보정": -1
+      },
+      "health_check": {
+        "cfo_positive": "+5140.7억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "20% ✅",
+        "roe_ok": "6.6% ⚠",
+        "per_ok": "10.7x ✅"
+      },
+      "trading": {
+        "signal": "■ 관심/비중확대",
+        "position_diag": "🟩 매수구간 (적정가 대비 5~20% 저평가)",
+        "price_band": {
+          "strong_buy": 23845,
+          "buy": 25100,
+          "target_1": 30465.0,
+          "target_2": 35035.0,
+          "overbought": 36558.0,
+          "stop_loss": 21335
+        },
+        "strategy": "소량 선취매 후 추가 확인 | 목표 30,465원",
+        "key_points": "배당수익률 5.3% (안정적 인컴) / 적정가 대비 21% 저평가 / 6개월 모멘텀 강함 (+31%)",
+        "risk_flags": "없음",
+        "bonus_reason": "-",
+        "malus_reason": "FCF음수(단기, 이자보상 OK)"
+      },
+      "fundamentals": {
+        "pbr": 0.5,
+        "roe": 6.551241859783673,
+        "div": 5.33,
+        "debt_ratio": 19.92798221588783,
+        "interest_coverage": null,
+        "cfo": 514071834748.0,
+        "fcf": -99026931114.0
+      },
+      "valuation": {
+        "per_target": 24135.0,
+        "pbr_target": 39507.0,
+        "graham_target": null,
+        "avg_target": 30465.0,
+        "upside_pct": 21.4
+      }
+    },
+    {
+      "rank": 14,
+      "code": "267260",
+      "name": "HD현대일렉트릭",
+      "market": "KOSPI",
+      "sector": "전기장비",
+      "price": 795000,
+      "composite_score": 70.5,
+      "grade": "◆   B  양호",
+      "score_100": {
+        "total": 88.0,
+        "grade": "★★★★  우수",
+        "수익성": 20,
+        "성장성": 18,
+        "재무안정": 15,
+        "현금흐름": 19,
+        "밸류에이션": 1,
+        "주주친화": 7,
+        "정성보정": 8
+      },
+      "health_check": {
+        "cfo_positive": "+9595.7억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "135% ✅",
+        "roe_ok": "36.0% ✅",
+        "per_ok": "38.1x ❌"
+      },
+      "trading": {
+        "signal": "▼▼ 매도 검토",
+        "position_diag": "🟥 고평가구간 (매도 검토)",
+        "price_band": {
+          "strong_buy": 755250,
+          "buy": 795000,
+          "target_1": 874500.0,
+          "target_2": 954000.0,
+          "overbought": 1033500.0,
+          "stop_loss": 675750
+        },
+        "strategy": "손절선(675,750원) 이탈 시 즉시 매도",
+        "key_points": "52주 저점 근처 (36%)",
+        "risk_flags": "없음",
+        "bonus_reason": "독점적 해자(OPM 42%·ROE 36%), 고성장(매출+23%)",
+        "malus_reason": "-"
+      },
+      "fundamentals": {
+        "pbr": 13.73,
+        "roe": 35.99801364316374,
+        "div": 0.92,
+        "debt_ratio": 134.62705751192166,
+        "interest_coverage": 6.3941481236307185,
+        "cfo": 959572657325.0,
+        "fcf": 733661187316.0
+      },
+      "valuation": {
+        "per_target": 345118.0,
+        "pbr_target": null,
+        "graham_target": 160498.0,
+        "avg_target": 302513.0,
+        "upside_pct": -61.9
+      }
+    },
+    {
+      "rank": 15,
+      "code": "014680",
+      "name": "한솔케미칼",
+      "market": "KOSPI",
+      "sector": "화학",
+      "price": 225000,
+      "composite_score": 69.2,
+      "grade": "◆   B  양호",
+      "score_100": {
+        "total": 82.0,
+        "grade": "★★★★  우수",
+        "수익성": 18,
+        "성장성": 16,
+        "재무안정": 19,
+        "현금흐름": 18,
+        "밸류에이션": 3,
+        "주주친화": 7,
+        "정성보정": 1
+      },
+      "health_check": {
+        "cfo_positive": "+2004.0억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "36% ✅",
+        "roe_ok": "12.6% ✅",
+        "per_ok": "17.5x ⚠"
+      },
+      "trading": {
+        "signal": "▽ 비중축소",
+        "position_diag": "🟥 고평가구간 (매도 검토)",
+        "price_band": {
+          "strong_buy": 213750,
+          "buy": 225000,
+          "target_1": 247500.0,
+          "target_2": 270000.0,
+          "overbought": 292500.0,
+          "stop_loss": 191250
+        },
+        "strategy": "추가 매수 자제, 기존 보유분 30~50% 정리 | 손절 191,250원 | 기술:⚡ 강력매수",
+        "key_points": "52주 저점 근처 (36%) / 기술지표 3/4 매수신호 집중",
+        "risk_flags": "없음",
+        "bonus_reason": "안정성장(매출+14%)",
+        "malus_reason": "-"
+      },
+      "fundamentals": {
+        "pbr": 2.29,
+        "roe": 12.582948529648718,
+        "div": 1.14,
+        "debt_ratio": 35.93763458086576,
+        "interest_coverage": 12.298195420040765,
+        "cfo": 200397744222.0,
+        "fcf": 69603739330.0
+      },
+      "valuation": {
+        "per_target": 188699.0,
+        "pbr_target": 177855.0,
+        "graham_target": 177136.0,
+        "avg_target": 183169.0,
+        "upside_pct": -18.6
+      }
+    },
+    {
+      "rank": 16,
+      "code": "000990",
+      "name": "DB하이텍",
+      "market": "KOSPI",
+      "sector": "반도체와반도체장비",
+      "price": 105900,
+      "composite_score": 68.1,
+      "grade": "◆   B  양호",
+      "score_100": {
+        "total": 88.0,
+        "grade": "★★★★  우수",
+        "수익성": 17,
+        "성장성": 18,
+        "재무안정": 19,
+        "현금흐름": 16,
+        "밸류에이션": 8,
+        "주주친화": 6,
+        "정성보정": 4
+      },
+      "health_check": {
+        "cfo_positive": "+3569.7억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "33% ✅",
+        "roe_ok": "11.3% ✅",
+        "per_ok": "11.7x ✅"
+      },
+      "trading": {
+        "signal": "─ 보유",
+        "position_diag": "🟨 소폭고평가 (비중축소 고려)",
+        "price_band": {
+          "strong_buy": 100605,
+          "buy": 105900,
+          "target_1": 116490.0,
+          "target_2": 127080.0,
+          "overbought": 137670.0,
+          "stop_loss": 90015
+        },
+        "strategy": "1차목표가(116,490원) 도달 시 30% 익절 고려",
+        "key_points": "52주 저점 근처 (34%) / 6개월 모멘텀 강함 (+30%)",
+        "risk_flags": "없음",
+        "bonus_reason": "성장산업(반도체와반도체장비)",
+        "malus_reason": "FCF음수(단기, 이자보상 OK)"
+      },
+      "fundamentals": {
+        "pbr": 1.28,
+        "roe": 11.255924783845153,
+        "div": 1.2,
+        "debt_ratio": 33.35952790138178,
+        "interest_coverage": 9.075367777413126,
+        "cfo": 356967025481.0,
+        "fcf": -36662081269.0
+      },
+      "valuation": {
+        "per_target": 108791.0,
+        "pbr_target": 81910.0,
+        "graham_target": 85303.0,
+        "avg_target": 95859.0,
+        "upside_pct": -9.5
+      }
+    },
+    {
+      "rank": 17,
+      "code": "011200",
+      "name": "HMM",
+      "market": "KOSPI",
+      "sector": "해운사",
+      "price": 20300,
+      "composite_score": 66.5,
+      "grade": "◆   B  양호",
+      "score_100": {
+        "total": 67.0,
+        "grade": "★★    보통",
+        "수익성": 11,
+        "성장성": 3,
+        "재무안정": 19,
+        "현금흐름": 18,
+        "밸류에이션": 7,
+        "주주친화": 10,
+        "정성보정": -1
+      },
+      "health_check": {
+        "cfo_positive": "+33051.3억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "26% ✅",
+        "roe_ok": "7.1% ⚠",
+        "per_ok": "10.5x ✅"
+      },
+      "trading": {
+        "signal": "─ 보유",
+        "position_diag": "🟨 소폭고평가 (비중축소 고려)",
+        "price_band": {
+          "strong_buy": 19285,
+          "buy": 20300,
+          "target_1": 22330.0,
+          "target_2": 24360.0,
+          "overbought": 26390.0,
+          "stop_loss": 17255
+        },
+        "strategy": "1차목표가(22,330원) 도달 시 30% 익절 고려 | 기술:▲ 매수",
+        "key_points": "배당수익률 3.4% (안정적 인컴) / 52주 저점 근처 (34%) / FCF Yield 11.8% (현금창출력 우수)",
+        "risk_flags": "🟡 매출감소(-7%)",
+        "bonus_reason": "-",
+        "malus_reason": "매출감소(-7%)"
+      },
+      "fundamentals": {
+        "pbr": 0.73,
+        "roe": 7.070537106665968,
+        "div": 3.41,
+        "debt_ratio": 26.313586659760464,
+        "interest_coverage": 5.0188464088094165,
+        "cfo": 3305131000000.0,
+        "fcf": 2234582000000.0
+      },
+      "valuation": {
+        "per_target": 17255.0,
+        "pbr_target": 20104.0,
+        "graham_target": null,
+        "avg_target": 18428.0,
+        "upside_pct": -9.2
+      }
+    },
+    {
+      "rank": 18,
+      "code": "012330",
+      "name": "현대모비스",
+      "market": "KOSPI",
+      "sector": "자동차부품",
+      "price": 513000,
+      "composite_score": 65.7,
+      "grade": "◆   B  양호",
+      "score_100": {
+        "total": 74.0,
+        "grade": "★★★   양호",
+        "수익성": 11,
+        "성장성": 11,
+        "재무안정": 19,
+        "현금흐름": 18,
+        "밸류에이션": 8,
+        "주주친화": 7,
+        "정성보정": 0
+      },
+      "health_check": {
+        "cfo_positive": "+44725.2억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "43% ✅",
+        "roe_ok": "7.4% ⚠",
+        "per_ok": "9.4x ✅"
+      },
+      "trading": {
+        "signal": "▽ 비중축소",
+        "position_diag": "🟨 소폭고평가 (비중축소 고려)",
+        "price_band": {
+          "strong_buy": 487350,
+          "buy": 513000,
+          "target_1": 564300.0,
+          "target_2": 615600.0,
+          "overbought": 666900.0,
+          "stop_loss": 436050
+        },
+        "strategy": "추가 매수 자제, 기존 보유분 30~50% 정리 | 손절 436,050원 | 기술:▼ 매도",
+        "key_points": "6개월 모멘텀 강함 (+15%)",
+        "risk_flags": "없음",
+        "bonus_reason": "-",
+        "malus_reason": "-"
+      },
+      "fundamentals": {
+        "pbr": 0.68,
+        "roe": 7.446713806846369,
+        "div": 1.74,
+        "debt_ratio": 43.05330961186009,
+        "interest_coverage": 9.453042469564043,
+        "cfo": 4472515000000.0,
+        "fcf": 1238826000000.0
+      },
+      "valuation": {
+        "per_target": 436050.0,
+        "pbr_target": 458411.0,
+        "graham_target": null,
+        "avg_target": 445257.0,
+        "upside_pct": -13.2
+      }
+    },
+    {
+      "rank": 19,
+      "code": "259960",
+      "name": "크래프톤",
+      "market": "KOSPI",
+      "sector": "게임엔터테인먼트",
+      "price": 231000,
+      "composite_score": 65.4,
+      "grade": "◆   B  양호",
+      "score_100": {
+        "total": 84.0,
+        "grade": "★★★★  우수",
+        "수익성": 17,
+        "성장성": 16,
+        "재무안정": 20,
+        "현금흐름": 18,
+        "밸류에이션": 5,
+        "주주친화": 5,
+        "정성보정": 3
+      },
+      "health_check": {
+        "cfo_positive": "+10451.0억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "31% ✅",
+        "roe_ok": "10.2% ✅",
+        "per_ok": "15.9x ⚠"
+      },
+      "trading": {
+        "signal": "▽ 비중축소",
+        "position_diag": "🟨 소폭고평가 (비중축소 고려)",
+        "price_band": {
+          "strong_buy": 219450,
+          "buy": 231000,
+          "target_1": 254100.0,
+          "target_2": 277200.0,
+          "overbought": 300300.0,
+          "stop_loss": 196350
+        },
+        "strategy": "추가 매수 자제, 기존 보유분 30~50% 정리 | 손절 196,350원",
+        "key_points": "52주 저점 근처 (21%)",
+        "risk_flags": "없음",
+        "bonus_reason": "고성장(매출+23%)",
+        "malus_reason": "-"
+      },
+      "fundamentals": {
+        "pbr": 1.56,
+        "roe": 10.21281898719187,
+        "div": 0.91,
+        "debt_ratio": 31.312064063282186,
+        "interest_coverage": 90.54298218344748,
+        "cfo": 1045103395353.0,
+        "fcf": 465510672189.0
+      },
+      "valuation": {
+        "per_target": 196350.0,
+        "pbr_target": 184800.0,
+        "graham_target": 236879.0,
+        "avg_target": 198387.0,
+        "upside_pct": -14.1
+      }
+    },
+    {
+      "rank": 20,
+      "code": "161390",
+      "name": "한국타이어앤테크놀로지",
+      "market": "KOSPI",
+      "sector": "자동차부품",
+      "price": 72400,
+      "composite_score": 65.4,
+      "grade": "◆   B  양호",
+      "score_100": {
+        "total": 82.0,
+        "grade": "★★★★  우수",
+        "수익성": 10,
+        "성장성": 16,
+        "재무안정": 16,
+        "현금흐름": 18,
+        "밸류에이션": 10,
+        "주주친화": 10,
+        "정성보정": 2
+      },
+      "health_check": {
+        "cfo_positive": "+16080.2억 ✅",
+        "no_impairment": "✅ 정상",
+        "debt_safe": "88% ✅",
+        "roe_ok": "6.8% ⚠",
+        "per_ok": "6.6x ✅"
+      },
+      "trading": {
+        "signal": "■ 관심/비중확대",
+        "position_diag": "🟩 매수구간 (적정가 대비 5~20% 저평가)",
+        "price_band": {
+          "strong_buy": 68780,
+          "buy": 72400,
+          "target_1": 77600.0,
+          "target_2": 89240.0,
+          "overbought": 93120.0,
+          "stop_loss": 61540
+        },
+        "strategy": "소량 선취매 후 추가 확인 | 목표 77,600원 | 기술:▲ 매수",
+        "key_points": "배당수익률 4.0% (안정적 인컴) / 6개월 모멘텀 강함 (+20%) / FCF Yield 10.9% (현금창출력 우수) / 📦 박스권(60.0일) 상단 근접 — 돌파 시 모멘텀 주목",
+        "risk_flags": "🟡 Altman낮음(Z=1.4, 이자보상·FCF 양호)",
+        "bonus_reason": "고성장(매출+125%)",
+        "malus_reason": "Altman낮음(Z=1.4, 단 이자보상·FCF 양호)"
+      },
+      "fundamentals": {
+        "pbr": 0.59,
+        "roe": 6.841261447071887,
+        "div": 3.95,
+        "debt_ratio": 87.63010256671531,
+        "interest_coverage": 3.414874684428411,
+        "cfo": 1608024241978.0,
+        "fcf": 873236647148.0
+      },
+      "valuation": {
+        "per_target": 79149.0,
+        "pbr_target": 75386.0,
+        "graham_target": null,
+        "avg_target": 77600.0,
+        "upside_pct": 7.2
+      }
+    }
+  ],
+  "filter_conditions": {
+    "min_roe": 8.0,
+    "max_pbr": 4.0,
+    "max_debt": 150.0,
+    "min_ic": 2.0,
+    "top_n": 20
+  }
+}
