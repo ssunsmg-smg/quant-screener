@@ -418,7 +418,27 @@ def run(args) -> dict:
         _save_pending(state, date_str)
         return {"sells": sells, "buys": buys}
 
+    # ── 시장 레짐 필터 (quant_trade.yml 에서 이전) ──
+    # KOSPI 가 200일선 아래면 매수 종목 수를 절반으로 줄인다.
+    # quant_trade.yml 을 껐기 때문에 이 하락장 방어 장치가 같이 사라지면 안 된다.
+    # ★ 하루에 26번 도는데 매번 yfinance 로 300일치를 받으면 낭비 + 실패 위험이
+    #   커지므로, 그날 첫 판정 결과를 pending 파일에 캐시해 재사용한다.
     buy_top_n = trader.cfg.get("buy_top_n", 20)
+    regime = state.get("market_regime")
+    if regime is None:
+        try:
+            regime = bool(trader._check_market_regime())
+        except Exception as e:
+            print(f"  ⚠ 시장레짐 확인 실패({e}) → 정상장으로 간주")
+            regime = True
+        state["market_regime"] = regime
+    if not regime:
+        buy_top_n = max(3, buy_top_n // 2)
+        print(f"  ⚠ [시장레짐] KOSPI 200일선 아래 — 매수 종목 수 축소: top{buy_top_n}")
+
+    # execute_signals 와 동일하게 상위 N종목만 매수 대상으로 삼는다
+    buy_candidates = buy_candidates.head(buy_top_n)
+
     pending_codes = [c for c in buy_candidates.index
                      if str(c) not in cands_state
                      or cands_state.get(str(c), {}).get("status") == "pending"]
