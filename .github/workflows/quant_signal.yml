@@ -30,6 +30,10 @@ on:
   # 이 워크플로우를 GitHub API로 직접 트리거한다.
   # (장중에만 의미 있으므로 VPS crontab에서 평일 09:00~15:00 KST 구간만 등록)
 
+  schedule:
+    # UTC 기준 — 00:05~05:50 UTC = 09:05~14:50 KST, 평일, 15분 간격
+    - cron: '5,20,35,50 0-5 * * 1-5'
+
   workflow_dispatch:   # 수동 실행 버튼 (테스트용)
 
 permissions:
