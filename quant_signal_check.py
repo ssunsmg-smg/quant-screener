@@ -327,8 +327,10 @@ def run(args) -> list:
                 gate.setdefault("detail", {})
                 gate["multi_detail"] = {
                     "mode": args.gate_mode,
-                    "passed_intervals": multi["passed_intervals"],
-                    "failed_intervals": multi["failed_intervals"],
+                    "passed_intervals":  multi["passed_intervals"],
+                    "failed_intervals":  multi["failed_intervals"],
+                    # 봉 부족으로 평가에서 빠진 주기 (실패가 아니라 '판정 불가')
+                    "skipped_intervals": multi.get("skipped", []),
                     "pass_count": f"{multi['pass_count']}/{multi['total_count']}",
                 }
                 df_min = charts.get(args.interval, pd.DataFrame())   # 로깅용
@@ -380,13 +382,21 @@ def run(args) -> list:
                     rec["status"] = "pending"
                     print(f"  ⚠ {code} 게이트 통과했지만 주문 실패: {r.get('msg','')}")
             else:
-                failed = [k for k, v in gate.get("checks", {}).items() if not v]
+                # "봉이 모자라 판정 불가"와 "지표가 나빠서 탈락"은 전혀 다른 상태다.
+                # 둘 다 '미통과'로 뭉뚱그리면 장 초반 로그를 보고 원인을 알 수 없다.
+                gdetail = gate.get("detail", {})
+                if gdetail.get("insufficient"):
+                    why = f"판정 불가 — {gdetail.get('error', '데이터 부족')}"
+                else:
+                    failed = [k for k, v in gate.get("checks", {}).items() if not v]
+                    why = f"실패: {', '.join(failed) if failed else '알 수 없음'}"
                 extra = ""
                 if args.multi_tf:
                     md = gate.get("multi_detail", {})
                     extra = (f" | 멀티분봉({md.get('mode')}): 통과 {md.get('pass_count')} "
-                             f"통과분봉={md.get('passed_intervals')} 실패분봉={md.get('failed_intervals')}")
-                print(f"  ⏳ {code} 게이트 미통과 (실패: {', '.join(failed)}) — "
+                             f"통과분봉={md.get('passed_intervals')} 실패분봉={md.get('failed_intervals')}"
+                             f" 제외분봉={md.get('skipped_intervals')}")
+                print(f"  ⏳ {code} 게이트 미통과 ({why}) — "
                       f"{rec['tries']}회차, 재시도 대기{extra}")
 
         except Exception:

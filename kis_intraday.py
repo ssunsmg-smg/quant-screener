@@ -197,11 +197,30 @@ class KISIntraday(KISAutoTrader):
         return out
 
     @staticmethod
-    def _calls_needed(interval: int, min_bars: int = 12) -> int:
-        """interval 분봉을 min_bars 개 만들려면 1분봉 몇 번 호출해야 하는지."""
+    def _calls_since_open(now: datetime = None) -> int:
+        """장 시작(09:00 KST)부터 지금까지를 덮으려면 몇 번 호출해야 하는지."""
+        now = now or _now_kst()
+        open_t = now.replace(hour=9, minute=0, second=0, microsecond=0)
+        elapsed = max(0, int((now - open_t).total_seconds() // 60))
+        return max(1, min(MAX_CALLS_FULL_SESSION, math.ceil(elapsed / MINUTES_PER_CALL)))
+
+    @classmethod
+    def _calls_needed(cls, interval: int, min_bars: int = 12) -> int:
+        """
+        1분봉을 몇 번 호출해야 하는지.
+
+        ★ 장 시작(09:00)부터 전 구간을 받는다.
+          이유: signal_engine.calc_vwap_bands() 는 "넘겨받은 df의 첫 행부터"
+          누적해서 VWAP 을 만든다. 최근 60분만 잘라서 넣으면 그건 60분 VWAP
+          이지 일중 VWAP 이 아니고, 게이트의 핵심 조건(종가 >= VWAP)이
+          영웅문 화면과 전혀 다른 값으로 판정된다.
+          → 지표를 맞추려면 반드시 장 시작부터 받아야 한다.
+
+        주기가 길어서 더 많이 필요하면 그쪽을 따른다.
+        """
         need_minutes = max(1, int(interval)) * max(1, int(min_bars))
-        calls = math.ceil(need_minutes / MINUTES_PER_CALL)
-        return max(2, min(MAX_CALLS_FULL_SESSION, calls))
+        by_bars = math.ceil(need_minutes / MINUTES_PER_CALL)
+        return max(1, min(MAX_CALLS_FULL_SESSION, max(by_bars, cls._calls_since_open())))
 
     # ──────────────────────────────────────────────────────
     #  공개: 단일 주기 분봉
