@@ -1,5 +1,28 @@
 name: 장중 L1+L2 시그널 체크 (분봉 게이트 → KIS 매수)
 
+# ── v2 수정본 (2026-08-09) ──────────────────────────────────
+# [수정 1] ★ 매매신호 JSON 준비 단계 추가 ★
+#     quant_daily.yml 은 신호 JSON을 signals/ 폴더에만 커밋하는데
+#     이 워크플로우는 `--output-dir .` 로 레포 루트를 뒤지고 있었다.
+#     → 항상 "파일 없음"으로 조용히 종료(exit 0), 초록불.
+#     quant_trade.yml 에는 있는 `cp signals/... .` 단계가 여기만 빠져 있었다.
+#     이제 quant_trade.yml 과 동일하게 준비 단계를 두고, 없으면 exit 1.
+#
+# [수정 2] 거래상태(trade_state) 복원/저장 추가.
+#     quant_trade.yml 과 재투자 자금 풀(reinvest_pool.json)을 공유해야
+#     같은 돈을 두 워크플로우가 중복 배정하지 않는다.
+#
+# [수정 3] is_real 정규화 + JSON 검증.
+#     `"is_real": ${{ secrets.KIS_IS_REAL }}` 는 따옴표가 없어서
+#     시크릿이 비었거나 "True"(파이썬 표기)면 JSON이 깨진다.
+#     → _load_config()가 예외를 삼켜 cfg={} → "앱키 미설정" → 조용히 종료.
+#     이제 소문자 true/false 로 정규화하고, 생성 직후 파싱 검증한다.
+#
+# [수정 4] push 충돌 재시도 + concurrency 그룹.
+#     10~15분마다 도는 이 워크플로우와 10시 quant_trade.yml 이 같은
+#     브랜치에 push 하므로 non-fast-forward 충돌이 잦다.
+# ────────────────────────────────────────────────────────────
+
 on:
   # ── 스케줄(cron) 트리거 없음 ──
   # quant_trade.yml과 동일한 이유: GitHub Actions schedule은 정시 보장이 안 됨.
@@ -10,12 +33,18 @@ on:
   workflow_dispatch:   # 수동 실행 버튼 (테스트용)
 
 permissions:
-  contents: write   # pending 상태 파일을 트레이드 로그에 커밋하기 위해 필요 (선택)
+  contents: write   # pending 상태 파일과 거래상태를 레포에 커밋하기 위해 필요
+
+# 같은 브랜치에 push하는 워크플로우끼리 겹치지 않게 직렬화.
+# cancel-in-progress: false — 진행 중인 매수 판단을 중간에 죽이면 안 된다.
+concurrency:
+  group: kis-trading-state
+  cancel-in-progress: false
 
 jobs:
   signal-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: 레포지터리 체크아웃
@@ -32,48 +61,128 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: KIS 설정파일 생성
+      # ★ 핵심 수정: quant_trade.yml 과 동일한 신호파일 준비 단계
+      #   (이 단계가 없어서 지금까지 매수가 한 번도 실행되지 않았다)
+      - name: 매매신호 JSON 준비
         run: |
-          cat > kis_config.json << EOF
-          {
-            "app_key":             "${{ secrets.KIS_APP_KEY }}",
-            "app_secret":          "${{ secrets.KIS_APP_SECRET }}",
-            "account_no":          "${{ secrets.KIS_ACCOUNT_NO }}",
-            "is_real":             ${{ secrets.KIS_IS_REAL }},
-            "max_daily_trades":    10,
-            "stop_loss_pct":       7.0,
-            "take_profit_min_pct": 2.0,
-            "take_profit_max_pct": 25.0,
-            "base_invest_amount":  10000000,
-            "reinvest_mode":       true,
-            "buy_top_n":           20
-          }
-          EOF
+          if [ -z "$(ls -A signals/매매신호_KR_*.json 2>/dev/null)" ]; then
+            echo "❌ signals/ 폴더에 매매신호 JSON이 없습니다."
+            echo "   전날 스크리닝(quant_daily.yml)이 먼저 성공해야 합니다."
+            exit 1
+          fi
+          cp signals/매매신호_KR_*.json .
+          echo "▶ 신호 파일 준비 완료:"
+          ls -la 매매신호_KR_*.json
+
+      # 재투자 자금 풀 / 보유포지션을 quant_trade.yml 과 공유
+      # (trade_state/ = git 추적, trades/ = 스크립트가 읽는 경로)
+      - name: 거래상태 복원
+        run: |
+          mkdir -p trades trade_state data/intraday
+          for f in positions.json reinvest_pool.json; do
+            if [ -f "trade_state/$f" ]; then
+              cp "trade_state/$f" "trades/$f"
+              echo "▶ $f 복원 완료"
+            else
+              echo "▶ 저장된 $f 없음 (최초 실행)"
+            fi
+          done
+          # 오늘자 pending 상태도 복원 (10분 뒤 실행이 재시도 횟수를 이어받도록)
+          TODAY=$(TZ=Asia/Seoul date '+%Y%m%d')
+          if [ -f "trade_state/intraday_pending_${TODAY}.json" ]; then
+            cp "trade_state/intraday_pending_${TODAY}.json" "trades/"
+            echo "▶ pending 상태 복원 완료 (${TODAY})"
+          fi
+
+      - name: KIS 설정파일 생성
+        env:
+          KIS_APP_KEY:    ${{ secrets.KIS_APP_KEY }}
+          KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
+          KIS_ACCOUNT_NO: ${{ secrets.KIS_ACCOUNT_NO }}
+          KIS_IS_REAL:    ${{ secrets.KIS_IS_REAL }}
+        run: |
+          set -euo pipefail
+
+          # ★ is_real 정규화 — 비어있거나 "True"/"TRUE"/"1" 같은 값이 와도
+          #   유효한 JSON 불리언이 되도록. 알 수 없는 값은 안전하게 false(모의투자).
+          RAW=$(printf '%s' "${KIS_IS_REAL:-}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+          case "$RAW" in
+            true|1|yes|y) IS_REAL=true ;;
+            *)            IS_REAL=false ;;
+          esac
+          if [ "$RAW" != "true" ] && [ "$RAW" != "false" ]; then
+            echo "⚠ KIS_IS_REAL 시크릿 값이 '$RAW' 입니다 → ${IS_REAL} 로 해석했습니다."
+            echo "  (권장: 시크릿에 정확히 true 또는 false 만 넣을 것)"
+          fi
+
+          # 앱키가 비어 있으면 여기서 바로 중단 — 나중에 조용히 no-op 되는 것보다 낫다
+          if [ -z "${KIS_APP_KEY:-}" ] || [ -z "${KIS_APP_SECRET:-}" ]; then
+            echo "❌ KIS_APP_KEY / KIS_APP_SECRET 시크릿이 비어 있습니다."
+            exit 1
+          fi
+
+          # jq 로 생성 — 특수문자(app_secret 의 / + = 등)가 있어도 안전하게 이스케이프됨
+          jq -n \
+            --arg  app_key    "$KIS_APP_KEY" \
+            --arg  app_secret "$KIS_APP_SECRET" \
+            --arg  account_no "${KIS_ACCOUNT_NO:-}" \
+            --argjson is_real "$IS_REAL" \
+            '{
+              app_key: $app_key,
+              app_secret: $app_secret,
+              account_no: $account_no,
+              is_real: $is_real,
+              max_daily_trades: 10,
+              stop_loss_pct: 7.0,
+              take_profit_min_pct: 2.0,
+              take_profit_max_pct: 25.0,
+              base_invest_amount: 10000000,
+              reinvest_mode: true,
+              buy_top_n: 20
+            }' > kis_config.json
+
+          # 생성 결과 검증 (깨진 JSON이 조용히 넘어가지 않도록)
+          python -c "import json;c=json.load(open('kis_config.json'));assert c['app_key'];print('▶ kis_config.json 검증 OK (is_real=%s)'%c['is_real'])"
 
       - name: 장중 시그널 체크 + 매수 실행
         run: |
-          python quant_signal_check.py --output-dir .
+          python quant_signal_check.py --output-dir signals --interval 5
           echo "▶ 실행 완료"
 
       - name: 설정파일 삭제
         if: always()
         run: rm -f kis_config.json
 
-      # pending 상태(trades/intraday_pending_*.json)와
-      # 누적 분봉/게이트 로그(data/intraday/)를 다음 실행에서도 이어 쓰고
-      # 나중에 백테스트 데이터로 쓰려면 레포에 커밋해서 영속화
-      - name: pending 상태 + 누적 데이터 커밋
+      # pending 상태 + 거래상태(재투자풀/포지션) + 누적 분봉/게이트 로그를
+      # 다음 실행에서 이어 쓰고 나중에 백테스트 데이터로 쓰려면 레포에 커밋해서 영속화
+      - name: 거래상태 + 누적 데이터 커밋
         if: always()
         run: |
-          git config user.name "github-actions[bot]"
+          mkdir -p trade_state
+          cp trades/positions.json      trade_state/ 2>/dev/null || true
+          cp trades/reinvest_pool.json  trade_state/ 2>/dev/null || true
+          cp trades/intraday_pending_*.json trade_state/ 2>/dev/null || true
+
+          git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add trades/intraday_pending_*.json 2>/dev/null || true
-          git add data/intraday/ 2>/dev/null || true
+
+          # data/intraday/ 가 .gitignore 에 걸려 있으면 -f 로 강제 추가
+          git add trade_state/ 2>/dev/null || true
+          git add -f data/intraday/ 2>/dev/null || true
+
           if git diff --staged --quiet; then
             echo "▶ 변경사항 없음"
           else
-            git commit -m "장중 시그널 pending 상태 + 분봉/게이트 로그 갱신 ($(date '+%Y-%m-%d %H:%M'))"
-            git push
+            git commit -m "장중 시그널 상태 + 분봉/게이트 로그 갱신 ($(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M') KST)"
+            # 10분마다 도는 워크플로우라 push 충돌이 잦다 → rebase 후 재시도
+            for i in 1 2 3; do
+              if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+                echo "▶ push 성공"; break
+              fi
+              echo "▶ push 충돌 — rebase 후 재시도 ($i/3)"
+              git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || true
+              sleep 5
+            done
           fi
 
       - name: 거래로그 저장
