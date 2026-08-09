@@ -12,6 +12,13 @@ on:
 permissions:
   contents: write   # 거래상태(positions/reinvest_pool)를 레포에 커밋하기 위해 필요
 
+# ── [2026-08-09 수정] quant_signal.yml 과 같은 concurrency 그룹 ──
+# 둘 다 같은 브랜치에 push 하고 같은 trade_state/ 를 건드리므로,
+# 겹쳐 돌면 push 충돌 + 거래상태 덮어쓰기가 난다. 반드시 직렬화한다.
+concurrency:
+  group: kis-trading-state
+  cancel-in-progress: false
+
 jobs:
   kis-trade:
     runs-on: ubuntu-latest
@@ -67,6 +74,12 @@ jobs:
           else
             echo "▶ 저장된 reinvest_pool.json 없음 (최초 실행)"
           fi
+          # 트레일링 스톱 고점 기록 — 장중 워크플로우가 쓰는 파일이지만
+          # 여기서도 덮어써 없애지 않도록 같이 복원/보존한다
+          if [ -f trade_state/peaks.json ]; then
+            cp trade_state/peaks.json trades/peaks.json
+            echo "▶ peaks.json 복원 완료"
+          fi
 
       # ⑥ KIS 설정파일 생성 (secrets에서 읽어와 매 실행마다 생성)
       #    ★ 실전 확정: 분기리밸런싱 top20 + 시총가중0.7 + 눌림목 (스크리닝 단계 적용)
@@ -104,7 +117,16 @@ jobs:
 
       # ⑧ KIS 자동매매 실행 (스크리닝 없이, 저장된 신호만 사용)
       #    --no-telegram 제거 → 매수/매도/수익률/재투자풀 알림이 텔레그램으로 전송됨
-      - name: KIS 자동매매 실행
+      # ── [2026-08-09 수정] ★ 매도 일원화 ★ ──
+      #   매도(손절/익절) 판단은 quant_signal_check.py 로 옮겼다.
+      #   이유: 여기는 하루 1회(10:00)만 돌아서, 13:00에 산 종목의 첫 손절
+      #        평가가 '다음날 10:00'이었다. 금요일 오후 매수면 69시간 무방비.
+      #   이제 장중 워크플로우가 15분 간격으로 손절/트레일링 익절을 담당한다.
+      #   여기서도 팔면 같은 종목을 두 곳에서 판단해 중복 매도가 날 수 있으므로
+      #   QUANT_DISABLE_SELL=1 로 매도만 끈다. (매수는 그대로 동작)
+      - name: KIS 자동매매 실행 (매수만 — 매도는 장중 워크플로우가 담당)
+        env:
+          QUANT_DISABLE_SELL: "1"
         run: |
           python quant_screener_v41f.py --trade-only --output-dir .
           echo "▶ 실행 완료"
@@ -124,6 +146,7 @@ jobs:
           mkdir -p trade_state
           cp trades/positions.json trade_state/positions.json 2>/dev/null || echo "▶ positions.json 없음 (보유종목 0개)"
           cp trades/reinvest_pool.json trade_state/reinvest_pool.json 2>/dev/null || echo "▶ reinvest_pool.json 없음"
+          cp trades/peaks.json         trade_state/peaks.json         2>/dev/null || true
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
