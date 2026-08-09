@@ -212,6 +212,38 @@ def _resolve_signal_json(output_dir: str) -> str:
     return ""
 
 
+# ══════════════════════════════════════════════════════════
+#  텔레그램 알림 (기존 MonitorEngine 재사용)
+# ══════════════════════════════════════════════════════════
+# [수정 7] 장중 시그널 워크플로우에는 텔레그램 알림이 아예 없었다.
+#   quant_trade.yml 은 telegram_config.json 을 만드는데 quant_signal.yml 은
+#   만들지 않았고, 이 스크립트에도 전송 코드가 없어서 장중에 매수가
+#   체결돼도 폰에 아무 것도 오지 않았다. → Actions 탭을 열어봐야만 알 수 있었다.
+#
+# ★ 원칙: 알림 실패가 매매를 막으면 안 된다. 모든 전송은 예외를 삼킨다.
+#   (텔레그램 API 장애 때문에 주문이 안 나가는 게 훨씬 나쁜 결과다)
+def _make_monitor(no_telegram: bool = False):
+    if no_telegram:
+        return None
+    try:
+        from quant_screener_v41f import MonitorEngine
+        m = MonitorEngine()
+        return m if m.enabled else None
+    except Exception as e:
+        print(f"  ⚠ 텔레그램 초기화 실패 — 알림 없이 계속 진행: {e}")
+        return None
+
+
+def _tg(monitor, text: str) -> None:
+    """절대 예외를 밖으로 던지지 않는 안전 전송."""
+    if not monitor:
+        return
+    try:
+        monitor.send(text)
+    except Exception as e:
+        print(f"  ⚠ 텔레그램 전송 실패(무시): {e}")
+
+
 def _already_held(trader: KISIntraday, code: str, balance: dict = None) -> bool:
     """메모리(self.positions)가 아니라 실제 계좌 잔고를 직접 조회해 판단.
     balance 를 넘기면 재조회하지 않는다 (종목마다 잔고를 다시 부르면
@@ -266,6 +298,8 @@ def run(args) -> list:
 
     state = _load_pending(date_str)
     cands_state = state["candidates"]
+    is_first_run_today = not cands_state      # 오늘 첫 실행인지 (감시 시작 알림용)
+    monitor = _make_monitor(getattr(args, "no_telegram", False))
 
     trader = KISIntraday()
     if not trader._is_configured():
@@ -290,8 +324,16 @@ def run(args) -> list:
     print(f"  [예산] 가용 풀 {invest_pool:,.0f}원 / 남은 {remaining_budget_targets}종목 "
           f"→ 종목당 {per_stock_budget:,.0f}원")
 
+    if is_first_run_today:
+        _tg(monitor,
+            f"🔍 <b>[한투 장중] 감시 시작</b>\n"
+            f"  {_now().strftime('%m/%d %H:%M')} · 매수 후보 {len(buy_candidates)}종목\n"
+            f"  💰 가용 예산 {invest_pool:,.0f}원 (종목당 {per_stock_budget:,.0f}원)\n"
+            f"  ⏰ {CUTOFF_HOUR_MIN[0]:02d}:{CUTOFF_HOUR_MIN[1]:02d}까지 15분 간격으로 게이트 확인")
+
     results = []
     spent_won = 0.0
+    errors = []
 
     for code in pending_codes:
         code = str(code)
@@ -376,7 +418,8 @@ def run(args) -> list:
                     rec["buy_time"] = _now().strftime("%H:%M:%S")
                     spent_won += fill * qty
                     results.append({"code": code, "name": row.get("종목명", ""), "action": "BUY",
-                                    "price": fill, "qty": qty})
+                                    "price": fill, "qty": qty,
+                                    "gate_detail": gate.get("detail", {})})
                     print(f"  ✅ {code} 게이트 통과 → 매수 {qty}주 @{fill:,}원")
                 else:
                     rec["status"] = "pending"
@@ -399,12 +442,13 @@ def run(args) -> list:
                 print(f"  ⏳ {code} 게이트 미통과 ({why}) — "
                       f"{rec['tries']}회차, 재시도 대기{extra}")
 
-        except Exception:
+        except Exception as e:
             # 한 종목의 예외로 나머지 종목까지 날리지 않는다
             print(f"  ⚠ {code} 처리 중 예외 — 이 종목만 건너뜁니다")
             traceback.print_exc()
             rec["status"] = "pending"
             rec["last_error"] = _now().strftime("%H:%M:%S")
+            errors.append(f"{code}: {type(e).__name__} {e}")
 
         cands_state[code] = rec
 
@@ -424,6 +468,29 @@ def run(args) -> list:
     expired_n = sum(1 for v in cands_state.values() if v.get("status") == "expired")
     print(f"\n  [시그널체크] 완료 — 매수:{bought_n} 대기:{pending_n} 만료:{expired_n} "
           f"(이번 실행 신규매수: {len(results)}건)")
+
+    # ── 텔레그램: 체결 알림 ──
+    # 게이트 통과 사유(VWAP/CMF)까지 같이 보낸다. "왜 샀는지"가 남아야
+    # 나중에 로그를 안 뒤져도 판단을 되짚을 수 있다.
+    if results:
+        lines = [f"📈 <b>[한투 장중] 매수 체결</b>  {_now().strftime('%m/%d %H:%M')}"]
+        for r in results:
+            lines.append(f"  • {r.get('name','')} ({r['code']}) "
+                         f"{r['qty']:,}주 @{r['price']:,}원 = {r['price']*r['qty']:,}원")
+            d = r.get("gate_detail") or {}
+            if d.get("vwap") is not None:
+                lines.append(f"     VWAP {d['vwap']:,.0f} · CMF {d.get('cmf')}")
+        lines.append(f"\n  💰 남은 예산: {(trader._reinvest_pool if trader._reinvest_pool else base_amt):,.0f}원")
+        lines.append(f"  📊 오늘 누적 매수 {bought_n}종목 / 대기 {pending_n}종목")
+        _tg(monitor, "\n".join(lines))
+
+    # ── 텔레그램: 예외 알림 ──
+    # 종목별 예외는 조용히 넘어가면 며칠씩 모르고 지나간다.
+    if errors:
+        _tg(monitor,
+            f"⚠️ <b>[한투 장중] 처리 중 오류 {len(errors)}건</b>  {_now().strftime('%m/%d %H:%M')}\n"
+            + "\n".join(f"  • {e[:120]}" for e in errors[:5])
+            + ("\n  …" if len(errors) > 5 else ""))
 
     try:
         data_status = data_logger.status_summary()
@@ -446,6 +513,8 @@ if __name__ == "__main__":
                              "KIS는 1분봉만 주므로 내부적으로 리샘플해서 만든다")
     parser.add_argument("--multi-tf", action="store_true",
                         help="기준 분봉(--interval) 단독 대신 1/5/10/15/30/60분봉을 모두 같이 평가 (기본: 끔)")
+    parser.add_argument("--no-telegram", action="store_true",
+                        help="텔레그램 알림 끄기 (기본: telegram_config.json 이 있으면 자동으로 켜짐)")
     parser.add_argument("--gate-mode", choices=["single", "all_pass", "majority"], default="single",
                         help="--multi-tf 켰을 때 최종 매수판단 기준. "
                              "single=기준 분봉 결과만 사용(멀티는 로그용), "
