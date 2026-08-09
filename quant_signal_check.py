@@ -58,8 +58,30 @@ from quant_screener_v41f import (
     _find_latest_signal_json, _load_signal_json_as_df,
 )
 from kis_intraday import KISIntraday
-from signal_engine import evaluate_entry_gate, evaluate_entry_gate_multi, DEFAULT_MIN_CANDLES
+from signal_engine import evaluate_entry_gate
 import data_logger
+
+# ── signal_engine 버전 차이 흡수 ─────────────────────────────
+# [수정 6] 레포의 signal_engine.py 에는 evaluate_entry_gate_multi 가
+#   존재하지 않아 모듈 import 단계에서 ImportError 로 죽었다.
+#   (kis_intraday.get_minute_chart_multi 가 없던 것과 같은 패턴 —
+#    호출하는 쪽만 있고 실제 함수는 작성되지 않음)
+#   기본 동작(single 모드)은 이 함수가 필요 없으므로, 없으면 없는 대로
+#   두고 --multi-tf 를 실제로 켰을 때만 크게 실패시킨다.
+#   ※ "없으면 조용히 넘어간다"가 아니라 "쓰려고 할 때 확실히 막는다"이다.
+try:
+    from signal_engine import evaluate_entry_gate_multi
+    HAS_MULTI_TF = True
+except ImportError:
+    evaluate_entry_gate_multi = None
+    HAS_MULTI_TF = False
+
+try:
+    from signal_engine import DEFAULT_MIN_CANDLES
+except ImportError:
+    # 지표(VWAP/OBV/CMF) 계산에 필요한 최소 봉 개수 — 주기가 길수록 적게 요구
+    DEFAULT_MIN_CANDLES = {1: 20, 3: 15, 5: 12, 10: 10, 15: 10, 30: 8, 60: 6}
+    print("  ℹ signal_engine 에 DEFAULT_MIN_CANDLES 없음 → 내장 기본값 사용")
 
 # ── KST 고정 (Actions 러너는 UTC) ──
 try:
@@ -204,6 +226,13 @@ def _already_held(trader: KISIntraday, code: str, balance: dict = None) -> bool:
 def run(args) -> list:
     date_str = _today_str()
     print(f"\n  [시그널체크] {_now().strftime('%Y-%m-%d %H:%M:%S')} KST 실행")
+
+    # --multi-tf 를 켰는데 signal_engine 에 해당 함수가 없으면 즉시 중단.
+    # 조용히 single 로 떨어뜨리면 "엄격한 게이트로 돌고 있다"고 착각하게 된다.
+    if args.multi_tf and not HAS_MULTI_TF:
+        print("  ❌ --multi-tf 를 켰지만 signal_engine.py 에 evaluate_entry_gate_multi() 가 없습니다.")
+        print("     signal_engine.py 에 해당 함수를 먼저 구현하거나, --multi-tf 없이 실행하세요.")
+        raise SystemExit(1)
 
     if not _is_trading_day():
         print(f"  🚫 오늘({_now().strftime('%Y-%m-%d (%a)')})은 거래일이 아닙니다 — 매수 시도 안 함")
