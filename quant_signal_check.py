@@ -1,44 +1,48 @@
 """
 ==============================================================
-  quant_signal_check.py — 장중 L1(가격)+L2(거래량) 시그널 체크
-  → 통과한 종목만 KIS 매수 실행
+  quant_signal_check.py — 장중 매도(손절/트레일링 익절) + 매수 게이트
 
-  ── v2 수정본 (2026-08-09) ─────────────────────────────────
-  [수정 1] ★ 신호파일 경로 문제 ★
-      quant_daily.yml 은 매매신호_KR_*.json 을 `signals/` 폴더에만
-      커밋한다(레포 루트의 원본은 러너와 함께 사라짐).
-      그런데 quant_signal.yml 은 `--output-dir .` 로 **루트**를 뒤졌다.
-      → 항상 "파일 없음" 으로 조용히 return, 종료코드 0, 초록불.
-      이게 장중 매수가 한 번도 실행되지 않은 진짜 원인이다.
-      이제 --output-dir 뿐 아니라 signals/ 도 자동으로 탐색하고,
-      그래도 못 찾으면 **exit 1 로 빨간불**을 낸다.
+  ── v3 (2026-08-09) : 매도 일원화 + 트레일링 스톱 ──────────
+  이 스크립트가 이제 **매도의 유일한 주체**다.
+  quant_trade.yml 쪽 매도는 QUANT_DISABLE_SELL=1 로 꺼서 중복을 없앤다.
 
-  [수정 2] 시각 기준을 KST 로 고정.
-      GitHub Actions 러너는 UTC. _past_cutoff() 가 14:50 **UTC**
-      (= 23:50 KST) 기준으로 동작해서 장 마감 컷오프 가드가
-      사실상 꺼져 있었다.
+  ★ 왜 매도를 장중으로 옮겼나
+    기존: 매도 판단은 quant_trade.yml(매일 10:00) 하루 1회.
+          → 13:00에 산 종목의 첫 손절 평가가 '다음날 10:00'.
+            금요일 오후 매수면 월요일 10시까지 69시간 무방비.
+            설정은 -7% 손절이지만 실제 동작은 "다음날 10시 가격에 판다"였다.
+    수정: 15분 간격으로 매수와 같은 주기로 평가. 손절 노출 24시간 → 15분.
 
-  [수정 3] 설정 오류를 조용히 넘기지 않는다.
-      KIS 앱키 미설정 → 기존엔 print 후 return(종료코드 0).
-      워크플로우가 초록불이라 2개월간 아무도 몰랐다. → exit 1.
+  ★ 트레일링 익절 (왜 고정 3% 익절이 아닌가)
+    기존 조건 `tp_min <= ret <= tp_max` 는 하루 1회 체크라서 밴드처럼
+    보였을 뿐, 15분 간격에서는 거의 항상 3%를 먼저 만나 팔린다.
+    즉 "3~25% 익절"이 아니라 사실상 "3% 익절"이 되고,
+    3% 익절 / 7% 손절은 비용 포함 손익비 0.39 → 본전 승률 72%가 필요하다.
+    그래서 3%를 '매도 신호'가 아니라 '익절 감시 시작' 트리거로 쓴다:
 
-  [수정 4] 재투자 자금 풀 차감·저장.
-      기존엔 풀에서 예산만 읽고 **쓴 만큼 차감하지 않아서**,
-      10분 뒤 실행과 10시 quant_trade.yml 이 같은 자금을 중복으로
-      배정할 수 있었다(초과매수 위험).
+      수익률 < 3%        → 손절선만 감시
+      수익률 ≥ 3% 도달    → 감시 모드(armed) 진입, 이후 고점가 계속 추적
+      고점가 대비 -2%     → 트레일링 익절 매도
+      수익률 ≥ 25%       → 무조건 익절 (상한)
+      수익률 ≤ -7%       → 손절
 
-  [수정 5] pending 상태 원자적 저장 + 종목별 예외 격리.
-      한 종목에서 예외가 나도 나머지 종목은 계속 처리한다.
+    → 원래 의도한 "3~25% 사이에서 익절"이 실제로 살아난다.
+      이 방식은 15분 간격이라야 의미가 있다(하루 1회면 고점을 놓친다).
 
-  실행 흐름:
-    1) 전날 저녁 스크리닝(quant_daily.yml)이 만든 매매신호_KR_*.json 로드
-    2) 후보 중 "오늘 아직 안 산" 종목만 골라 분봉 데이터로 L1+L2 게이트 체크
-    3) 게이트 통과 → 매수 실행 (기존 KISAutoTrader.place_order 재사용)
-       게이트 실패 → pending 상태 유지, 다음 실행(예: 10분 후)에 재시도
-    4) 마감 컷오프 시각 이후엔 더 이상 신규 매수 시도 안 함
+  ★ 매도는 일일 거래한도에서 제외한다
+    max_daily_trades 는 신규 매수에만 건다. 한도 때문에 손절 주문이
+    막히는 것이 훨씬 나쁜 결과이기 때문.
+
+  ★ 시간 창이 매수/매도가 다르다
+    매수 컷오프 14:50 / 매도 컷오프 15:20 — 마감 직전까지 팔 수는 있어야 한다.
+
+  실행 순서:
+    ① 매도 판단 (손절/트레일링 익절) → 회수금을 재투자 풀에 반영
+    ② 매수 게이트 (L1+L2) → 통과 종목 매수
+    (매도가 먼저인 이유: 회수금이 그날 매수 예산에 반영돼야 한다)
 
   사용법:
-    python quant_signal_check.py --output-dir signals
+    python quant_signal_check.py --output-dir signals --interval 5
 ==============================================================
 """
 
@@ -62,13 +66,9 @@ from signal_engine import evaluate_entry_gate
 import data_logger
 
 # ── signal_engine 버전 차이 흡수 ─────────────────────────────
-# [수정 6] 레포의 signal_engine.py 에는 evaluate_entry_gate_multi 가
-#   존재하지 않아 모듈 import 단계에서 ImportError 로 죽었다.
-#   (kis_intraday.get_minute_chart_multi 가 없던 것과 같은 패턴 —
-#    호출하는 쪽만 있고 실제 함수는 작성되지 않음)
-#   기본 동작(single 모드)은 이 함수가 필요 없으므로, 없으면 없는 대로
-#   두고 --multi-tf 를 실제로 켰을 때만 크게 실패시킨다.
-#   ※ "없으면 조용히 넘어간다"가 아니라 "쓰려고 할 때 확실히 막는다"이다.
+# 레포의 signal_engine.py 에 evaluate_entry_gate_multi / DEFAULT_MIN_CANDLES 가
+# 없던 시기가 있어, import 단계에서 통째로 죽었다. 기본 동작(single)은 multi가
+# 필요 없으므로 없으면 없는 대로 두고, --multi-tf 를 실제로 켰을 때만 막는다.
 try:
     from signal_engine import evaluate_entry_gate_multi
     HAS_MULTI_TF = True
@@ -79,8 +79,7 @@ except ImportError:
 try:
     from signal_engine import DEFAULT_MIN_CANDLES
 except ImportError:
-    # 지표(VWAP/OBV/CMF) 계산에 필요한 최소 봉 개수 — 주기가 길수록 적게 요구
-    DEFAULT_MIN_CANDLES = {1: 20, 3: 15, 5: 12, 10: 10, 15: 10, 30: 8, 60: 6}
+    DEFAULT_MIN_CANDLES = {1: 20, 3: 15, 5: 12, 10: 10, 15: 10, 30: 10, 60: 10}
     print("  ℹ signal_engine 에 DEFAULT_MIN_CANDLES 없음 → 내장 기본값 사용")
 
 # ── KST 고정 (Actions 러너는 UTC) ──
@@ -97,51 +96,38 @@ def _now() -> datetime:
 
 
 PENDING_PATH_TMPL = os.path.join(TRADE_DIR, "intraday_pending_{date}.json")
-MAX_TRIES_PER_STOCK = 30          # 하루 최대 재시도 횟수 (너무 오래 들고 있지 않도록)
-CUTOFF_HOUR_MIN = (14, 50)        # 이 시각(KST) 이후엔 신규 매수 시도 중단
-MARKET_OPEN_HOUR_MIN = (9, 0)     # 장 시작 전에는 분봉 자체가 없으므로 실행 의미 없음
+PEAKS_PATH        = os.path.join(TRADE_DIR, "peaks.json")   # 트레일링용 고점 (날짜 무관, 보유하는 동안 유지)
 
-# ── 분봉 게이트 설정 ──
-# GATE_INTERVALS: 체크할 분봉 목록.
-#   --multi-tf 옵션을 주면 5/10/15/30/60분봉도 같이 평가해서 로그에 남기고,
-#   GATE_MODE에 따라 실제 매수 판단에도 반영한다.
-# GATE_MODE: "single"      = 기준 분봉 결과만으로 매수 판단 (기존 동작, 기본값)
-#            "all_pass"    = 평가 가능한 모든 분봉이 전부 통과해야 매수 (가장 엄격)
-#            "majority"    = 평가 가능한 분봉 중 과반수가 통과하면 매수
+MAX_TRIES_PER_STOCK  = 30      # 하루 최대 재시도 횟수
+BUY_CUTOFF_HOUR_MIN  = (14, 50)   # 이후 신규 매수 중단
+SELL_CUTOFF_HOUR_MIN = (15, 20)   # 이후 매도도 중단 (동시호가 직전)
+MARKET_OPEN_HOUR_MIN = (9, 0)
+
+# ── 매도 기본 파라미터 (kis_config.json 으로 덮어쓸 수 있음) ──
+DEFAULT_STOP_LOSS_PCT    = 7.0    # 손절
+DEFAULT_TRAIL_TRIGGER_PCT = 3.0   # 이 수익률 도달 시 익절 감시 시작(armed)
+DEFAULT_TRAIL_DROP_PCT   = 2.0    # 고점가 대비 이만큼 하락하면 익절 매도
+DEFAULT_HARD_TP_PCT      = 25.0   # 무조건 익절 상한
+
 GATE_INTERVALS_DEFAULT = (1, 5, 10, 15, 30, 60)
 
 # ── 수동 관리하는 한국 휴장일 목록 (2026년, KRX 공식 일정 기준) ──
-# 형식: "YYYYMMDD". 주말은 별도로 자동 체크하니 여기엔 주중 공휴일/임시휴장일만 추가.
-# ⚠ 출처는 2차 정리 자료라, 실거래 전에 한국거래소(KRX) 공식 공지로 한 번 더 대조 권장.
-#   연도가 바뀌면 이 목록도 매년 갱신해야 함.
+# ⚠ 출처는 2차 정리 자료라, 실거래 전에 한국거래소(KRX) 공식 공지로 재대조 권장.
+#   연도가 바뀌면 매년 갱신해야 함.
 KRX_HOLIDAYS = {
-    "20260101",  # 신정
-    "20260216",  # 설날
-    "20260217",  # 설날
-    "20260218",  # 설날
-    "20260302",  # 삼일절 대체휴일
-    "20260501",  # 근로자의날
-    "20260505",  # 어린이날
-    "20260525",  # 석가탄신일 대체휴일
-    "20260603",  # 임시공휴일
-    "20260717",  # 제헌절 (※ 실제로는 비거래일 아닌 경우도 있어 KRX 공지로 재확인 권장)
-    "20260817",  # 광복절 대체휴일
-    "20260924",  # 추석
-    "20260925",  # 추석
-    "20261005",  # 개천절 대체휴일
-    "20261009",  # 한글날
-    "20261225",  # 성탄절
-    "20261231",  # 연말휴장일
+    "20260101", "20260216", "20260217", "20260218", "20260302",
+    "20260501", "20260505", "20260525", "20260603", "20260717",
+    "20260817", "20260924", "20260925", "20261005", "20261009",
+    "20261225", "20261231",
 }
 
 
 def _is_trading_day(now: datetime = None) -> bool:
-    """주말(토/일) + 수동 휴장일 목록 기준으로 '오늘이 실제 거래일인지' 판단.
-    ⚠ KIS 분봉 API는 휴장일에도 직전 거래일 데이터를 '정상 데이터'처럼 돌려주므로
-      (빈 데이터로 휴장 여부를 판단할 수 없음이 실측으로 확인됨),
-      반드시 이 함수로 사전에 막아야 한다."""
+    """주말 + 수동 휴장일 기준 거래일 판단.
+    ⚠ KIS 분봉 API는 휴장일에도 직전 거래일 데이터를 '정상 데이터'처럼
+      돌려주므로(실측 확인됨), 반드시 이 함수로 사전에 막아야 한다."""
     now = now or _now()
-    if now.weekday() >= 5:   # 5=토, 6=일
+    if now.weekday() >= 5:
         return False
     if now.strftime("%Y%m%d") in KRX_HOLIDAYS:
         return False
@@ -152,76 +138,50 @@ def _today_str() -> str:
     return _now().strftime("%Y%m%d")
 
 
-def _load_pending(date_str: str) -> dict:
-    path = PENDING_PATH_TMPL.format(date=date_str)
+def _hm() -> tuple:
+    n = _now()
+    return (n.hour, n.minute)
+
+
+def _before_open() -> bool:      return _hm() <  MARKET_OPEN_HOUR_MIN
+def _past_buy_cutoff() -> bool:  return _hm() >= BUY_CUTOFF_HOUR_MIN
+def _past_sell_cutoff() -> bool: return _hm() >= SELL_CUTOFF_HOUR_MIN
+
+
+# ══════════════════════════════════════════════════════════
+#  상태 파일 (pending / peaks)
+# ══════════════════════════════════════════════════════════
+def _load_json(path: str, default):
     if os.path.exists(path):
         try:
             with open(path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             pass
-    return {"date": date_str, "candidates": {}}
+    return default
 
 
-def _save_pending(state: dict, date_str: str):
+def _save_json(path: str, data) -> None:
     """임시파일 → rename 으로 원자적 저장 (중간에 죽어도 파일이 깨지지 않음)."""
-    path = PENDING_PATH_TMPL.format(date=date_str)
     os.makedirs(TRADE_DIR, exist_ok=True)
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(state, f, ensure_ascii=False, indent=2)
+        json.dump(data, f, ensure_ascii=False, indent=2)
     os.replace(tmp, path)
 
 
-def _past_cutoff() -> bool:
-    now = _now()
-    return (now.hour, now.minute) >= CUTOFF_HOUR_MIN
-
-
-def _before_open() -> bool:
-    now = _now()
-    return (now.hour, now.minute) < MARKET_OPEN_HOUR_MIN
-
-
-def _resolve_signal_json(output_dir: str) -> str:
-    """
-    매매신호 JSON 을 찾는다.
-    ★ quant_daily.yml 이 signals/ 폴더에만 커밋하므로, output_dir 이
-      루트여도 signals/ 를 반드시 함께 뒤져야 한다.
-    탐색 순서: output_dir → output_dir/signals → BASE_DIR → BASE_DIR/signals
-    """
-    tried = []
-    for d in [output_dir,
-              os.path.join(output_dir, "signals"),
-              BASE_DIR,
-              os.path.join(BASE_DIR, "signals")]:
-        if not d or d in tried:
-            continue
-        tried.append(d)
-        if not os.path.isdir(d):
-            continue
-        path = _find_latest_signal_json(d)
-        if path:
-            print(f"  📁 신호 파일: {path}")
-            return path
-
-    print("  ❌ 매매신호_KR_*.json 을 찾지 못했습니다.")
-    print(f"     탐색한 경로: {tried}")
-    print("     → quant_daily.yml(저녁 스크리닝)이 먼저 성공했는지,")
-    print("       signals/ 폴더가 레포에 커밋되어 있는지 확인하세요.")
-    return ""
+def _load_pending(date_str): return _load_json(PENDING_PATH_TMPL.format(date=date_str),
+                                               {"date": date_str, "candidates": {}, "sold_today": []})
+def _save_pending(state, date_str): _save_json(PENDING_PATH_TMPL.format(date=date_str), state)
+def _load_peaks():  return _load_json(PEAKS_PATH, {})
+def _save_peaks(p): _save_json(PEAKS_PATH, p)
 
 
 # ══════════════════════════════════════════════════════════
-#  텔레그램 알림 (기존 MonitorEngine 재사용)
+#  텔레그램 (기존 MonitorEngine 재사용)
 # ══════════════════════════════════════════════════════════
-# [수정 7] 장중 시그널 워크플로우에는 텔레그램 알림이 아예 없었다.
-#   quant_trade.yml 은 telegram_config.json 을 만드는데 quant_signal.yml 은
-#   만들지 않았고, 이 스크립트에도 전송 코드가 없어서 장중에 매수가
-#   체결돼도 폰에 아무 것도 오지 않았다. → Actions 탭을 열어봐야만 알 수 있었다.
-#
 # ★ 원칙: 알림 실패가 매매를 막으면 안 된다. 모든 전송은 예외를 삼킨다.
-#   (텔레그램 API 장애 때문에 주문이 안 나가는 게 훨씬 나쁜 결과다)
+#   (텔레그램 장애 때문에 손절이 안 나가는 게 훨씬 나쁜 결과다)
 def _make_monitor(no_telegram: bool = False):
     if no_telegram:
         return None
@@ -235,7 +195,6 @@ def _make_monitor(no_telegram: bool = False):
 
 
 def _tg(monitor, text: str) -> None:
-    """절대 예외를 밖으로 던지지 않는 안전 전송."""
     if not monitor:
         return
     try:
@@ -244,84 +203,240 @@ def _tg(monitor, text: str) -> None:
         print(f"  ⚠ 텔레그램 전송 실패(무시): {e}")
 
 
-def _already_held(trader: KISIntraday, code: str, balance: dict = None) -> bool:
-    """메모리(self.positions)가 아니라 실제 계좌 잔고를 직접 조회해 판단.
-    balance 를 넘기면 재조회하지 않는다 (종목마다 잔고를 다시 부르면
-    API 호출이 종목수만큼 늘어나 rate limit 에 걸린다)."""
-    bal = balance if balance is not None else trader.get_balance()
-    for h in bal.get("holdings", []):
+# ══════════════════════════════════════════════════════════
+#  ① 매도 — 손절 / 트레일링 익절
+# ══════════════════════════════════════════════════════════
+def _decide_sell(ret: float, cur: float, peak_price: float, armed: bool, cfg: dict) -> tuple:
+    """
+    매도 판단 (순수 함수 — 단위 테스트 가능).
+    반환: (sell_reason 또는 None, action, armed_new, peak_price_new)
+
+    우선순위: 손절 > 상한 익절 > 트레일링 익절
+    (손절을 먼저 보는 이유: 급락장에서 트레일링 조건과 동시에 성립할 때
+     '익절'로 기록되면 나중에 성과 분석이 왜곡된다)
+    """
+    stop    = abs(cfg.get("stop_loss_pct",        DEFAULT_STOP_LOSS_PCT))     / 100
+    trigger = abs(cfg.get("trail_trigger_pct",    DEFAULT_TRAIL_TRIGGER_PCT)) / 100
+    drop    = abs(cfg.get("trail_drop_pct",       DEFAULT_TRAIL_DROP_PCT))    / 100
+    hard_tp = abs(cfg.get("take_profit_max_pct",  DEFAULT_HARD_TP_PCT))       / 100
+
+    # 고점 갱신 + 감시 모드 진입 (한 번 armed 되면 해제되지 않는다)
+    peak_new  = max(peak_price, cur)
+    armed_new = armed or (ret >= trigger)
+
+    if ret <= -stop:
+        return f"손절 {ret*100:+.2f}%", "STOP_LOSS", armed_new, peak_new
+    if ret >= hard_tp:
+        return f"익절(상한 {hard_tp*100:.0f}%) {ret*100:+.2f}%", "TAKE_PROFIT", armed_new, peak_new
+    if armed_new and peak_new > 0 and cur <= peak_new * (1 - drop):
+        fall = (peak_new - cur) / peak_new * 100
+        # ★ 고점에서 크게 밀리면 트레일링선에 닿는 시점이 이미 '손실'일 수 있다.
+        #   (예: +8%까지 갔다가 급락해 -2%에서 트레일링 발동)
+        #   이걸 전부 TAKE_PROFIT 으로 기록하면 나중에 성과 집계가 오염된다
+        #   — 실현손익이 마이너스인 거래가 '익절'로 세어지기 때문.
+        #   그래서 실제 수익률 부호로 라벨을 나눈다. 매도 동작 자체는 동일.
+        if ret > 0:
+            return (f"트레일링 익절 {ret*100:+.2f}% (고점 {peak_new:,.0f} 대비 -{fall:.2f}%)",
+                    "TAKE_PROFIT", armed_new, peak_new)
+        return (f"트레일링 손절 {ret*100:+.2f}% (고점 {peak_new:,.0f} 대비 -{fall:.2f}%)",
+                "TRAIL_STOP", armed_new, peak_new)
+    return None, None, armed_new, peak_new
+
+
+def _run_sell_check(trader: KISIntraday, balance: dict, monitor, date_str: str) -> tuple:
+    """
+    보유 종목 전체에 대해 손절/트레일링 익절 판단 → 매도 실행.
+    반환: (executed_list, recovered_won, sold_codes)
+    """
+    holdings = [h for h in (balance.get("holdings") or [])
+                if int(float(h.get("hldg_qty", 0) or 0)) > 0]
+    peaks = _load_peaks()
+    executed, recovered, sold_codes = [], 0.0, []
+
+    if not holdings:
+        print("  [매도점검] 보유 종목 없음")
+        # 보유가 사라졌으면 고점 기록도 정리 (다음에 다시 사면 새로 시작해야 한다)
+        if peaks:
+            _save_peaks({})
+        return executed, recovered, sold_codes
+
+    cfg = trader.cfg
+    print(f"\n  [매도점검] 보유 {len(holdings)}종목 — "
+          f"손절 -{abs(cfg.get('stop_loss_pct', DEFAULT_STOP_LOSS_PCT)):.1f}% | "
+          f"익절감시 +{abs(cfg.get('trail_trigger_pct', DEFAULT_TRAIL_TRIGGER_PCT)):.1f}% 도달 후 "
+          f"고점 대비 -{abs(cfg.get('trail_drop_pct', DEFAULT_TRAIL_DROP_PCT)):.1f}% | "
+          f"상한 +{abs(cfg.get('take_profit_max_pct', DEFAULT_HARD_TP_PCT)):.0f}%")
+
+    # ★ 매도는 일일 거래한도에서 제외한다.
+    #   한도(max_daily_trades)를 매수로 다 써서 손절 주문이 막히는 것이
+    #   훨씬 나쁜 결과다. 매도 구간에서만 한도를 풀고, 끝난 뒤 되돌린다.
+    saved_limit = cfg.get("max_daily_trades", 10)
+    cfg["max_daily_trades"] = 10 ** 9
+
+    try:
+        for h in holdings:
+            code = str(h.get("pdno", "")).strip()
+            qty  = int(float(h.get("hldg_qty", 0) or 0))
+            avg  = float(h.get("pchs_avg_pric", 0) or 0)
+            if not code or qty <= 0 or avg <= 0:
+                continue
+            try:
+                cur = trader.get_current_price(code)
+                time.sleep(0.4)
+                if cur <= 0:
+                    print(f"     ⚠ {code} 현재가 조회 실패 → 이번 회차 판단 보류")
+                    continue
+
+                ret = (cur - avg) / avg
+                rec = peaks.get(code, {})
+                peak_price = float(rec.get("peak_price", max(cur, avg)))
+                armed      = bool(rec.get("armed", False))
+
+                reason, action, armed_new, peak_new = _decide_sell(ret, cur, peak_price, armed, cfg)
+                peaks[code] = {"peak_price": peak_new, "armed": armed_new,
+                               "avg_price": avg, "updated": _now().strftime("%Y-%m-%d %H:%M:%S")}
+
+                if not reason:
+                    state = "익절감시중" if armed_new else "손절선만감시"
+                    print(f"     · {code} {ret*100:+6.2f}% (고점 {peak_new:,.0f}) — {state}, 보유 유지")
+                    continue
+
+                emoji = "🔴" if action == "STOP_LOSS" else "🟢"
+                print(f"  {emoji} {code} {reason} → 매도 {qty:,}주")
+                r = trader.place_order(code, "SELL", qty, reason=reason)
+                time.sleep(0.4)
+                if r.get("success"):
+                    fill = r.get("price") or cur
+                    value = fill * qty
+                    recovered += value
+                    sold_codes.append(code)
+                    peaks.pop(code, None)      # 청산됐으니 고점 기록 삭제
+                    executed.append({"action": action, "code": code, "qty": qty,
+                                     "price": fill, "ret_pct": round(ret * 100, 2),
+                                     "recovered_won": round(value), "reason": reason})
+                else:
+                    print(f"     ⚠ {code} 매도 주문 실패: {r.get('msg','')}")
+            except Exception as e:
+                # 한 종목 예외로 나머지 종목의 손절까지 막히면 안 된다
+                print(f"     ⚠ {code} 매도 판단 중 예외 — 이 종목만 건너뜁니다: {e}")
+                traceback.print_exc()
+    finally:
+        cfg["max_daily_trades"] = saved_limit
+        # 매도로 소진된 카운트를 매수 한도로 넘기지 않는다
+        trader.daily_trades = 0
+        _save_peaks(peaks)
+
+    return executed, recovered, sold_codes
+
+
+def _already_held(code: str, balance: dict) -> bool:
+    """실제 계좌 잔고 기준 보유 여부 (메모리 positions 를 믿지 않는다)."""
+    for h in (balance.get("holdings") or []):
         if str(h.get("pdno", "")) == str(code) and int(float(h.get("hldg_qty", 0) or 0)) > 0:
             return True
     return False
 
 
-def run(args) -> list:
+# ══════════════════════════════════════════════════════════
+#  메인
+# ══════════════════════════════════════════════════════════
+def run(args) -> dict:
     date_str = _today_str()
     print(f"\n  [시그널체크] {_now().strftime('%Y-%m-%d %H:%M:%S')} KST 실행")
 
-    # --multi-tf 를 켰는데 signal_engine 에 해당 함수가 없으면 즉시 중단.
-    # 조용히 single 로 떨어뜨리면 "엄격한 게이트로 돌고 있다"고 착각하게 된다.
     if args.multi_tf and not HAS_MULTI_TF:
         print("  ❌ --multi-tf 를 켰지만 signal_engine.py 에 evaluate_entry_gate_multi() 가 없습니다.")
-        print("     signal_engine.py 에 해당 함수를 먼저 구현하거나, --multi-tf 없이 실행하세요.")
         raise SystemExit(1)
 
     if not _is_trading_day():
-        print(f"  🚫 오늘({_now().strftime('%Y-%m-%d (%a)')})은 거래일이 아닙니다 — 매수 시도 안 함")
-        print("     (KIS 분봉 API는 휴장일에도 직전 거래일 데이터를 정상처럼 돌려주므로,")
-        print("      이 가드 없이는 휴장일 데이터로 잘못 매수할 위험이 있음)")
-        return []
-
+        print(f"  🚫 오늘({_now().strftime('%Y-%m-%d (%a)')})은 거래일이 아닙니다 — 매매 안 함")
+        return {"sells": [], "buys": []}
     if _before_open():
-        print(f"  🌙 장 시작({MARKET_OPEN_HOUR_MIN[0]:02d}:{MARKET_OPEN_HOUR_MIN[1]:02d} KST) 전 — 분봉 데이터 없음, 종료")
-        return []
+        print("  🌙 장 시작 전 — 종료")
+        return {"sells": [], "buys": []}
+    if _past_sell_cutoff():
+        print(f"  ⏰ 매도 컷오프({SELL_CUTOFF_HOUR_MIN[0]:02d}:{SELL_CUTOFF_HOUR_MIN[1]:02d}) 이후 — 종료")
+        return {"sells": [], "buys": []}
 
-    if _past_cutoff():
-        print(f"  ⏰ 컷오프 시각({CUTOFF_HOUR_MIN[0]:02d}:{CUTOFF_HOUR_MIN[1]:02d} KST) 이후 — 신규 매수 시도 안 함")
-        return []
+    trader = KISIntraday()
+    if not trader._is_configured():
+        print("  ❌ KIS 앱키 미설정 → 중단 (kis_config.json / GitHub Secrets 확인)")
+        raise SystemExit(1)
 
-    # ── 신호 파일 (없으면 설정 오류 → 빨간불) ──
+    monitor  = _make_monitor(getattr(args, "no_telegram", False))
+    state    = _load_pending(date_str)
+    cands_state = state.setdefault("candidates", {})
+    sold_today  = set(state.setdefault("sold_today", []))
+    is_first_run_today = not cands_state and not sold_today
+
+    base_amt  = trader.cfg.get("base_invest_amount", 10_000_000)
+    balance   = trader.get_balance()
+
+    # ═══ ① 매도 먼저 (회수금이 그날 매수 예산에 반영돼야 한다) ═══
+    sells, recovered, sold_codes = _run_sell_check(trader, balance, monitor, date_str)
+    if recovered > 0:
+        new_pool = (trader._reinvest_pool if trader._reinvest_pool else base_amt) + recovered
+        trader._save_reinvest_pool(new_pool, note=f"장중 매도 회수 {recovered:,.0f}원")
+        print(f"  💰 매도 회수 {recovered:,.0f}원 → 재투자 풀 {new_pool:,.0f}원")
+        sold_today |= set(sold_codes)
+        state["sold_today"] = sorted(sold_today)
+        balance = trader.get_balance()      # 매도 반영된 잔고로 갱신
+
+    if sells:
+        lines = [f"💸 <b>[한투 장중] 매도 체결</b>  {_now().strftime('%m/%d %H:%M')}"]
+        for s in sells:
+            mark = "🔴" if s["action"] in ("STOP_LOSS","TRAIL_STOP") else "🟢"
+            lines.append(f"  {mark} {s['code']} {s['qty']:,}주 @{s['price']:,}원 ({s['ret_pct']:+.2f}%)")
+            lines.append(f"     {s['reason']}")
+        lines.append(f"\n  💰 회수 {recovered:,.0f}원 → 재투자 풀 "
+                     f"{(trader._reinvest_pool or 0):,.0f}원")
+        _tg(monitor, "\n".join(lines))
+
+    # ═══ ② 매수 (컷오프 전에만) ═══
+    buys, spent_won, errors = [], 0.0, []
+    if _past_buy_cutoff():
+        print(f"  ⏰ 매수 컷오프({BUY_CUTOFF_HOUR_MIN[0]:02d}:{BUY_CUTOFF_HOUR_MIN[1]:02d}) 이후 "
+              f"— 신규 매수 생략 (매도 점검은 위에서 완료)")
+        _save_pending(state, date_str)
+        return {"sells": sells, "buys": buys}
+
     json_path = _resolve_signal_json(args.output_dir)
     if not json_path:
+        _save_pending(state, date_str)
         raise SystemExit(1)
 
     df_top = _load_signal_json_as_df(json_path)
     if df_top.empty:
         print("  ⚠ 신호 파일에 유효 후보 없음")
-        return []
+        _save_pending(state, date_str)
+        return {"sells": sells, "buys": buys}
 
     sig_series = df_top["매매시그널"].astype(str)
     buy_candidates = df_top[sig_series.str.contains("매수", na=False)]
     if buy_candidates.empty:
         print("  ⚠ 매수 시그널 종목 없음")
-        return []
+        _save_pending(state, date_str)
+        return {"sells": sells, "buys": buys}
 
-    state = _load_pending(date_str)
-    cands_state = state["candidates"]
-    is_first_run_today = not cands_state      # 오늘 첫 실행인지 (감시 시작 알림용)
-    monitor = _make_monitor(getattr(args, "no_telegram", False))
-
-    trader = KISIntraday()
-    if not trader._is_configured():
-        # 조용히 return 하면 워크플로우가 초록불이라 아무도 모른다 → 빨간불
-        print("  ❌ KIS 앱키 미설정 → 중단 (kis_config.json / GitHub Secrets 확인)")
-        raise SystemExit(1)
-
-    bal       = trader.get_balance()          # ← 한 번만 조회해서 재사용
-    base_amt  = trader.cfg.get("base_invest_amount", 10_000_000)
     buy_top_n = trader.cfg.get("buy_top_n", 20)
-
     pending_codes = [c for c in buy_candidates.index
                      if str(c) not in cands_state
                      or cands_state.get(str(c), {}).get("status") == "pending"]
+    # ★ 오늘 이미 판 종목은 다시 사지 않는다.
+    #   안 그러면 손절 → 게이트 통과 → 재매수 → 또 손절 로 하루에 같은 종목을
+    #   왕복하며 수수료만 태울 수 있다.
+    skipped_resell = [c for c in pending_codes if str(c) in sold_today]
+    pending_codes  = [c for c in pending_codes if str(c) not in sold_today]
+    if skipped_resell:
+        print(f"  ↩ 오늘 매도한 종목은 재매수 제외: {skipped_resell}")
 
-    print(f"  [시그널체크] 매수 후보 {len(buy_candidates)}종목 중 미해결 {len(pending_codes)}종목 체크")
+    print(f"\n  [매수게이트] 후보 {len(buy_candidates)}종목 중 미해결 {len(pending_codes)}종목 체크")
 
     bought_today = [c for c, v in cands_state.items() if v.get("status") == "bought"]
-    remaining_budget_targets = max(1, buy_top_n - len(bought_today))
+    remaining_targets = max(1, buy_top_n - len(bought_today))
     invest_pool = trader._reinvest_pool if trader._reinvest_pool else base_amt
-    per_stock_budget = invest_pool / remaining_budget_targets
-    print(f"  [예산] 가용 풀 {invest_pool:,.0f}원 / 남은 {remaining_budget_targets}종목 "
+    per_stock_budget = invest_pool / remaining_targets
+    print(f"  [예산] 가용 풀 {invest_pool:,.0f}원 / 남은 {remaining_targets}종목 "
           f"→ 종목당 {per_stock_budget:,.0f}원")
 
     if is_first_run_today:
@@ -329,23 +444,22 @@ def run(args) -> list:
             f"🔍 <b>[한투 장중] 감시 시작</b>\n"
             f"  {_now().strftime('%m/%d %H:%M')} · 매수 후보 {len(buy_candidates)}종목\n"
             f"  💰 가용 예산 {invest_pool:,.0f}원 (종목당 {per_stock_budget:,.0f}원)\n"
-            f"  ⏰ {CUTOFF_HOUR_MIN[0]:02d}:{CUTOFF_HOUR_MIN[1]:02d}까지 15분 간격으로 게이트 확인")
-
-    results = []
-    spent_won = 0.0
-    errors = []
+            f"  📉 매도: 손절 -{abs(trader.cfg.get('stop_loss_pct', DEFAULT_STOP_LOSS_PCT)):.0f}% / "
+            f"익절 +{abs(trader.cfg.get('trail_trigger_pct', DEFAULT_TRAIL_TRIGGER_PCT)):.0f}% 도달 후 "
+            f"고점 대비 -{abs(trader.cfg.get('trail_drop_pct', DEFAULT_TRAIL_DROP_PCT)):.0f}%\n"
+            f"  ⏰ 매수 {BUY_CUTOFF_HOUR_MIN[0]:02d}:{BUY_CUTOFF_HOUR_MIN[1]:02d} / "
+            f"매도 {SELL_CUTOFF_HOUR_MIN[0]:02d}:{SELL_CUTOFF_HOUR_MIN[1]:02d}까지, 15분 간격")
 
     for code in pending_codes:
         code = str(code)
         rec = cands_state.get(code, {"status": "pending", "tries": 0, "first_seen": date_str})
-
         try:
             if rec.get("tries", 0) >= MAX_TRIES_PER_STOCK:
                 rec["status"] = "expired"
                 cands_state[code] = rec
                 continue
 
-            if _already_held(trader, code, balance=bal):
+            if _already_held(code, balance):
                 rec["status"] = "bought"
                 cands_state[code] = rec
                 print(f"  ℹ {code} 이미 보유 중 → 스킵")
@@ -359,26 +473,24 @@ def run(args) -> list:
                     gate_pass = multi["all_pass"]
                 elif args.gate_mode == "majority":
                     gate_pass = multi["majority_pass"]
-                else:  # "single" — 기준 분봉 결과만으로 판단 (멀티는 로그만)
+                else:
                     gate_pass = multi["by_interval"].get(args.interval, {}).get("pass", False)
-
                 gate = dict(multi["by_interval"].get(args.interval,
                                                      {"pass": gate_pass, "checks": {}, "detail": {}}))
-                gate["pass"] = gate_pass   # 위에서 정한 모드 기준으로 최종 통과여부 덮어씀
+                gate["pass"] = gate_pass
                 gate.setdefault("checks", {})
                 gate.setdefault("detail", {})
                 gate["multi_detail"] = {
                     "mode": args.gate_mode,
                     "passed_intervals":  multi["passed_intervals"],
                     "failed_intervals":  multi["failed_intervals"],
-                    # 봉 부족으로 평가에서 빠진 주기 (실패가 아니라 '판정 불가')
                     "skipped_intervals": multi.get("skipped", []),
                     "pass_count": f"{multi['pass_count']}/{multi['total_count']}",
                 }
-                df_min = charts.get(args.interval, pd.DataFrame())   # 로깅용
+                df_min = charts.get(args.interval, pd.DataFrame())
             else:
                 df_min = trader.get_minute_chart(code, interval=args.interval)
-                time.sleep(0.4)   # KIS rate limit 여유
+                time.sleep(0.4)
                 gate = evaluate_entry_gate(df_min, direction="BUY",
                                            min_candles=DEFAULT_MIN_CANDLES.get(args.interval, 10))
 
@@ -386,9 +498,8 @@ def run(args) -> list:
             rec["last_check"] = _now().strftime("%H:%M:%S")
             rec["last_detail"] = gate.get("detail", {})
 
-            # ── 분봉 + 게이트 판정 누적 로깅 (백테스트용 데이터 축적, B안) ──
             # 매수 여부와 무관하게 "체크한 모든 시점"을 남겨야 나중에
-            # "통과했다면 어떻게 됐을지" / "탈락했는데 사실 올랐는지"를 다 검증할 수 있다.
+            # "통과했다면 어떻게 됐을지" / "탈락했는데 사실 올랐는지"를 검증할 수 있다.
             row_name = str(buy_candidates.loc[code].get("종목명", "")) if code in buy_candidates.index else ""
             approx_price = float(df_min["Close"].iloc[-1]) if not df_min.empty else 0.0
             data_logger.log_minute_bars(code, df_min, date_str)
@@ -407,8 +518,7 @@ def run(args) -> list:
                 vwap = gate.get("detail", {}).get("vwap")
                 reason = (f"L1+L2게이트 통과 | VWAP:{vwap:.0f} " if isinstance(vwap, (int, float))
                           else "L1+L2게이트 통과 | ")
-                reason += (f"CMF:{gate.get('detail', {}).get('cmf')} | "
-                           f"{row.get('매매시그널', '')}")
+                reason += f"CMF:{gate.get('detail', {}).get('cmf')} | {row.get('매매시그널', '')}"
 
                 r = trader.place_order(code, "BUY", qty, reason=reason)
                 if r.get("success"):
@@ -417,16 +527,14 @@ def run(args) -> list:
                     rec["buy_price"] = fill
                     rec["buy_time"] = _now().strftime("%H:%M:%S")
                     spent_won += fill * qty
-                    results.append({"code": code, "name": row.get("종목명", ""), "action": "BUY",
-                                    "price": fill, "qty": qty,
-                                    "gate_detail": gate.get("detail", {})})
+                    buys.append({"code": code, "name": row.get("종목명", ""), "action": "BUY",
+                                 "price": fill, "qty": qty, "gate_detail": gate.get("detail", {})})
                     print(f"  ✅ {code} 게이트 통과 → 매수 {qty}주 @{fill:,}원")
                 else:
                     rec["status"] = "pending"
                     print(f"  ⚠ {code} 게이트 통과했지만 주문 실패: {r.get('msg','')}")
             else:
                 # "봉이 모자라 판정 불가"와 "지표가 나빠서 탈락"은 전혀 다른 상태다.
-                # 둘 다 '미통과'로 뭉뚱그리면 장 초반 로그를 보고 원인을 알 수 없다.
                 gdetail = gate.get("detail", {})
                 if gdetail.get("insufficient"):
                     why = f"판정 불가 — {gdetail.get('error', '데이터 부족')}"
@@ -436,14 +544,12 @@ def run(args) -> list:
                 extra = ""
                 if args.multi_tf:
                     md = gate.get("multi_detail", {})
-                    extra = (f" | 멀티분봉({md.get('mode')}): 통과 {md.get('pass_count')} "
-                             f"통과분봉={md.get('passed_intervals')} 실패분봉={md.get('failed_intervals')}"
-                             f" 제외분봉={md.get('skipped_intervals')}")
-                print(f"  ⏳ {code} 게이트 미통과 ({why}) — "
-                      f"{rec['tries']}회차, 재시도 대기{extra}")
+                    extra = (f" | 멀티({md.get('mode')}) 통과 {md.get('pass_count')} "
+                             f"통과={md.get('passed_intervals')} 실패={md.get('failed_intervals')} "
+                             f"제외={md.get('skipped_intervals')}")
+                print(f"  ⏳ {code} 게이트 미통과 ({why}) — {rec['tries']}회차, 재시도 대기{extra}")
 
         except Exception as e:
-            # 한 종목의 예외로 나머지 종목까지 날리지 않는다
             print(f"  ⚠ {code} 처리 중 예외 — 이 종목만 건너뜁니다")
             traceback.print_exc()
             rec["status"] = "pending"
@@ -455,9 +561,6 @@ def run(args) -> list:
     state["candidates"] = cands_state
     _save_pending(state, date_str)
 
-    # ── 재투자 풀 차감 (중복 배정 방지) ──
-    # 기존엔 풀에서 읽기만 하고 쓴 만큼 빼지 않아서, 10분 뒤 실행과
-    # 10시 quant_trade.yml 이 같은 자금을 또 배정할 수 있었다.
     if spent_won > 0:
         new_pool = max(0.0, (trader._reinvest_pool if trader._reinvest_pool else base_amt) - spent_won)
         trader._save_reinvest_pool(new_pool, note=f"장중 시그널 매수 {spent_won:,.0f}원 집행")
@@ -466,26 +569,20 @@ def run(args) -> list:
     bought_n = sum(1 for v in cands_state.values() if v.get("status") == "bought")
     pending_n = sum(1 for v in cands_state.values() if v.get("status") == "pending")
     expired_n = sum(1 for v in cands_state.values() if v.get("status") == "expired")
-    print(f"\n  [시그널체크] 완료 — 매수:{bought_n} 대기:{pending_n} 만료:{expired_n} "
-          f"(이번 실행 신규매수: {len(results)}건)")
+    print(f"\n  [시그널체크] 완료 — 매도:{len(sells)}건 매수:{len(buys)}건 "
+          f"(누적 보유대상:{bought_n} 대기:{pending_n} 만료:{expired_n})")
 
-    # ── 텔레그램: 체결 알림 ──
-    # 게이트 통과 사유(VWAP/CMF)까지 같이 보낸다. "왜 샀는지"가 남아야
-    # 나중에 로그를 안 뒤져도 판단을 되짚을 수 있다.
-    if results:
+    if buys:
         lines = [f"📈 <b>[한투 장중] 매수 체결</b>  {_now().strftime('%m/%d %H:%M')}"]
-        for r in results:
+        for r in buys:
             lines.append(f"  • {r.get('name','')} ({r['code']}) "
                          f"{r['qty']:,}주 @{r['price']:,}원 = {r['price']*r['qty']:,}원")
             d = r.get("gate_detail") or {}
             if d.get("vwap") is not None:
                 lines.append(f"     VWAP {d['vwap']:,.0f} · CMF {d.get('cmf')}")
         lines.append(f"\n  💰 남은 예산: {(trader._reinvest_pool if trader._reinvest_pool else base_amt):,.0f}원")
-        lines.append(f"  📊 오늘 누적 매수 {bought_n}종목 / 대기 {pending_n}종목")
         _tg(monitor, "\n".join(lines))
 
-    # ── 텔레그램: 예외 알림 ──
-    # 종목별 예외는 조용히 넘어가면 며칠씩 모르고 지나간다.
     if errors:
         _tg(monitor,
             f"⚠️ <b>[한투 장중] 처리 중 오류 {len(errors)}건</b>  {_now().strftime('%m/%d %H:%M')}\n"
@@ -493,32 +590,49 @@ def run(args) -> list:
             + ("\n  …" if len(errors) > 5 else ""))
 
     try:
-        data_status = data_logger.status_summary()
-        print(f"  [데이터누적] 지금까지 {data_status['days']}거래일치 분봉/게이트 로그 축적됨 "
-              f"(종목×일 파일 {data_status.get('total_stock_day_files', 0)}개)")
+        ds = data_logger.status_summary()
+        print(f"  [데이터누적] {ds['days']}거래일치 분봉/게이트 로그 "
+              f"(종목×일 파일 {ds.get('total_stock_day_files', 0)}개)")
     except Exception as e:
         print(f"  ⚠ 데이터 누적 상태 조회 실패: {e}")
 
-    return results
+    return {"sells": sells, "buys": buys}
+
+
+def _resolve_signal_json(output_dir: str) -> str:
+    """
+    매매신호 JSON 탐색. quant_daily.yml 이 signals/ 폴더에만 커밋하므로
+    output_dir 이 루트여도 signals/ 를 반드시 함께 뒤진다.
+    """
+    tried = []
+    for d in [output_dir, os.path.join(output_dir, "signals"),
+              BASE_DIR, os.path.join(BASE_DIR, "signals")]:
+        if not d or d in tried:
+            continue
+        tried.append(d)
+        if not os.path.isdir(d):
+            continue
+        path = _find_latest_signal_json(d)
+        if path:
+            print(f"  📁 신호 파일: {path}")
+            return path
+    print("  ❌ 매매신호_KR_*.json 을 찾지 못했습니다.")
+    print(f"     탐색한 경로: {tried}")
+    print("     → quant_daily.yml(저녁 스크리닝)이 먼저 성공했는지 확인하세요.")
+    return ""
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="장중 L1+L2 시그널 게이트 체크 → KIS 매수")
-    # ★ 기본값을 signals 로 변경 — quant_daily.yml 이 여기에만 커밋한다
+    parser = argparse.ArgumentParser(
+        description="장중 매도(손절/트레일링 익절) + L1+L2 매수 게이트")
     parser.add_argument("--output-dir", type=str, default="signals",
-                        help="매매신호_KR_*.json 이 있는 폴더 (기본: signals). "
-                             "여기서 못 찾으면 하위 signals/ 와 레포 루트도 자동 탐색")
+                        help="매매신호_KR_*.json 폴더 (기본: signals)")
     parser.add_argument("--interval", type=int, choices=[1, 3, 5, 10, 15, 30, 60], default=5,
-                        help="게이트 판단 기준으로 삼을 분봉 주기 (기본: 5분). "
-                             "KIS는 1분봉만 주므로 내부적으로 리샘플해서 만든다")
+                        help="게이트 판단 기준 분봉 주기 (기본: 5분)")
     parser.add_argument("--multi-tf", action="store_true",
-                        help="기준 분봉(--interval) 단독 대신 1/5/10/15/30/60분봉을 모두 같이 평가 (기본: 끔)")
-    parser.add_argument("--no-telegram", action="store_true",
-                        help="텔레그램 알림 끄기 (기본: telegram_config.json 이 있으면 자동으로 켜짐)")
+                        help="1/5/10/15/30/60분봉을 모두 평가")
     parser.add_argument("--gate-mode", choices=["single", "all_pass", "majority"], default="single",
-                        help="--multi-tf 켰을 때 최종 매수판단 기준. "
-                             "single=기준 분봉 결과만 사용(멀티는 로그용), "
-                             "all_pass=평가된 분봉 전부 통과해야 매수, "
-                             "majority=과반수 통과시 매수 (기본: single)")
+                        help="--multi-tf 켰을 때 최종 매수판단 기준")
+    parser.add_argument("--no-telegram", action="store_true", help="텔레그램 알림 끄기")
     args = parser.parse_args()
     run(args)

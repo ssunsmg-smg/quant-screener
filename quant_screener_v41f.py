@@ -2214,7 +2214,17 @@ class KISAutoTrader:
         # ① 종목별 개별 손절·익절 판단
         recovered_today = 0.0
 
-        if self.positions:
+        # ── [2026-08-09 수정] 매도 일원화 스위치 ──
+        # 매도 판단은 quant_signal_check.py(15분 간격, 트레일링 스톱)로 옮겼다.
+        # 여기(하루 1회 10:00)서도 팔면 같은 종목을 두 곳에서 판단해 중복 매도
+        # 위험이 있으므로, quant_trade.yml 은 QUANT_DISABLE_SELL=1 을 걸어 끈다.
+        # (환경변수를 안 걸면 기존과 100% 동일하게 동작 — 기본값은 매도 ON)
+        _sell_off = str(os.environ.get("QUANT_DISABLE_SELL", "")).strip().lower() in ("1", "true", "yes", "y")
+        if _sell_off and self.positions:
+            print(f"\n  [KIS] 매도 판단 생략 (QUANT_DISABLE_SELL=1) — "
+                  f"보유 {len(self.positions)}종목의 손절/익절은 장중 워크플로우가 담당")
+
+        if self.positions and not _sell_off:
             print(f"\n  [KIS] 포지션 점검 (보유 {len(self.positions)}종목, 종목별 개별 판단)...")
             print(f"     손절: -{stop*100:.1f}% | 익절: +{tp_min*100:.1f}%~+{tp_max*100:.1f}% (종목별 독립 판단)")
 
