@@ -6,8 +6,15 @@ on:
   # (특히 0분대는 트래픽 몰려 지연 빈번) VPS(런던, LD4)의 시스템 cron이
   # 매일 KST 오전 10시 정각에 GitHub API로 이 워크플로를 직접 트리거합니다.
 
-  # ── 수동 실행 버튼 (테스트/비상용) ──
+  # ── 수동 실행 버튼 (비상용) ──
+  # ★ 2026-08-09: 이 워크플로우는 기본 비활성화됨 (아래 jobs.if 참고)
+  #   긴급히 돌려야 하면 force 를 true 로 두고 수동 실행.
   workflow_dispatch:
+    inputs:
+      force:
+        description: '비활성화 해제하고 강제 실행 (true 입력 시에만 동작)'
+        required: false
+        default: 'false'
 
 permissions:
   contents: write   # 거래상태(positions/reinvest_pool)를 레포에 커밋하기 위해 필요
@@ -21,6 +28,30 @@ concurrency:
 
 jobs:
   kis-trade:
+    # ══════════════════════════════════════════════════════════
+    #  ★ 2026-08-09: 이 워크플로우는 비활성화되었습니다 ★
+    #
+    #  이유 — 이게 켜져 있으면 L1+L2 게이트가 무력화됩니다.
+    #    execute_signals() 의 매수는 게이트를 거치지 않고
+    #      new_targets = [보유하지 않은 매수후보 전부]
+    #    를 10:00 에 한꺼번에 삽니다. 그 결과:
+    #
+    #      09:05~09:50  quant_signal  게이트 통과 0~2종목만 매수
+    #      10:00        quant_trade   ★ 남은 후보 전부 매수 (게이트 무시)
+    #      10:05~14:50  quant_signal  "이미 보유 중" → 하루 종일 할 일 없음
+    #
+    #    예산(재투자 풀)까지 10시에 소진되므로, 15분 간격 게이트가
+    #    VWAP/OBV/CMF 를 계산하는 의미 자체가 사라집니다.
+    #    두 워크플로우는 역할 분담이 아니라 '먼저 사는 쪽이 이기는' 관계입니다.
+    #
+    #  이제 매수·매도 모두 quant_signal.yml 이 담당합니다.
+    #  (시장 레짐 필터도 그쪽으로 이전했습니다)
+    #
+    #  VPS cron 이 계속 트리거해도 이 조건 때문에 job 이 조용히 skip 됩니다
+    #  (빨간 실패가 아니라 회색 skipped 로 표시 — VPS 접근 없이도 안전).
+    #  되살리려면: 이 if 줄을 지우거나, 수동 실행에서 force=true 입력.
+    # ══════════════════════════════════════════════════════════
+    if: github.event.inputs.force == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
