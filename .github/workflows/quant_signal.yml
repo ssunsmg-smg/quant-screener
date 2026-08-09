@@ -24,15 +24,17 @@ name: 장중 L1+L2 시그널 체크 (분봉 게이트 → KIS 매수)
 # ────────────────────────────────────────────────────────────
 
 on:
-  # ── 스케줄(cron) 트리거 없음 ──
-  # quant_trade.yml과 동일한 이유: GitHub Actions schedule은 정시 보장이 안 됨.
-  # VPS(런던, LD4)의 시스템 cron이 09:05~14:50 사이 10~15분 간격으로
-  # 이 워크플로우를 GitHub API로 직접 트리거한다.
-  # (장중에만 의미 있으므로 VPS crontab에서 평일 09:00~15:00 KST 구간만 등록)
-
+  # ── [수정 5] schedule 트리거 추가 ──
+  # 원래는 "GitHub schedule은 정시 보장이 안 된다"는 이유로 VPS cron에
+  # 맡겨져 있었다. 그런데 실행 이력을 확인해보니 VPS cron이 이 워크플로우를
+  # 2개월 동안 단 한 번도 트리거한 적이 없었다(수동 1회가 전부).
+  # 몇 분 지연되는 것보다 아예 안 도는 게 훨씬 큰 문제이므로 schedule을 넣는다.
+  #
+  # cron은 UTC 기준이다. KST = UTC+9 이므로
+  #   00:05~05:50 UTC = 09:05~14:50 KST (정규장 구간)
+  # 요일도 UTC 기준이지만, 이 시간대는 KST와 같은 날짜라 1-5(월~금) 그대로 맞다.
   schedule:
-    # UTC 기준 — 00:05~05:50 UTC = 09:05~14:50 KST, 평일, 15분 간격
-    - cron: '5,20,35,50 0-5 * * 1-5'
+    - cron: '5,20,35,50 0-5 * * 1-5'   # 평일 09:05~14:50 KST, 15분 간격
 
   workflow_dispatch:   # 수동 실행 버튼 (테스트용)
 
@@ -148,6 +150,23 @@ jobs:
           # 생성 결과 검증 (깨진 JSON이 조용히 넘어가지 않도록)
           python -c "import json;c=json.load(open('kis_config.json'));assert c['app_key'];print('▶ kis_config.json 검증 OK (is_real=%s)'%c['is_real'])"
 
+      # [수정 6] 텔레그램 설정 — quant_trade.yml 에는 있고 여기만 빠져 있었다.
+      #   그래서 장중에 매수가 체결돼도 폰에 아무 알림이 안 왔다.
+      #   시크릿이 비어 있으면 파일을 만들지 않는다 → 스크립트가 알림 없이 그냥 진행.
+      #   (알림 설정 누락 때문에 매매가 멈추면 안 된다)
+      - name: 텔레그램 설정파일 생성
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+            echo "▶ 텔레그램 시크릿 없음 — 알림 없이 진행합니다"
+            exit 0
+          fi
+          jq -n --arg t "$TELEGRAM_BOT_TOKEN" --arg c "$TELEGRAM_CHAT_ID" \
+            '{bot_token: $t, chat_id: $c}' > telegram_config.json
+          echo "▶ 텔레그램 설정파일 생성 완료"
+
       - name: 장중 시그널 체크 + 매수 실행
         run: |
           python quant_signal_check.py --output-dir signals --interval 5
@@ -155,7 +174,7 @@ jobs:
 
       - name: 설정파일 삭제
         if: always()
-        run: rm -f kis_config.json
+        run: rm -f kis_config.json telegram_config.json
 
       # pending 상태 + 거래상태(재투자풀/포지션) + 누적 분봉/게이트 로그를
       # 다음 실행에서 이어 쓰고 나중에 백테스트 데이터로 쓰려면 레포에 커밋해서 영속화
