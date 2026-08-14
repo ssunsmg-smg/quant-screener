@@ -1,26 +1,26 @@
 {
   "005850": {
-    "peak_price": 58800,
+    "peak_price": 60400,
     "armed": true,
     "avg_price": 55952.809,
-    "updated": "2026-08-13 14:52:31"
+    "updated": "2026-08-14 11:02:31"
   },
   "030200": {
     "peak_price": 54100.0,
     "armed": false,
     "avg_price": 54100.0,
-    "updated": "2026-08-13 14:52:36"
+    "updated": "2026-08-14 11:02:36"
   },
   "100840": {
     "peak_price": 28450.0,
     "armed": false,
     "avg_price": 28227.731,
-    "updated": "2026-08-13 14:52:43"
+    "updated": "2026-08-14 11:02:37"
   },
   "192080": {
     "peak_price": 62467.115,
     "armed": false,
     "avg_price": 62467.115,
-    "updated": "2026-08-13 14:52:44"
+    "updated": "2026-08-14 11:02:42"
   }
 }
