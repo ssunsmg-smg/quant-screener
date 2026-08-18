@@ -1,0 +1,1 @@
+{"timestamp": "2026-08-18 10:16:38", "tz": "Asia/Seoul", "code": "001060", "name": "JW중외제약", "current_price": 27800.0, "gate_pass": false, "insufficient": true, "checks": {}, "detail": {"error": "데이터 부족 (7/12 캔들)", "insufficient": true, "candles": 7, "min_candles": 12}}

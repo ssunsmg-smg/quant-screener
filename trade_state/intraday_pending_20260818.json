@@ -1,0 +1,29 @@
+{
+  "date": "20260818",
+  "candidates": {
+    "192080": {
+      "status": "bought",
+      "tries": 0,
+      "first_seen": "20260818"
+    },
+    "100840": {
+      "status": "bought",
+      "tries": 0,
+      "first_seen": "20260818"
+    },
+    "001060": {
+      "status": "pending",
+      "tries": 1,
+      "first_seen": "20260818",
+      "last_check": "10:16:38",
+      "last_detail": {
+        "error": "데이터 부족 (7/12 캔들)",
+        "insufficient": true,
+        "candles": 7,
+        "min_candles": 12
+      }
+    }
+  },
+  "sold_today": [],
+  "market_regime": true
+}
