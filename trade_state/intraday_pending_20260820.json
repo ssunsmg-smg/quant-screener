@@ -1,0 +1,47 @@
+{
+  "date": "20260820",
+  "candidates": {
+    "005850": {
+      "status": "pending",
+      "tries": 1,
+      "first_seen": "20260820",
+      "last_check": "10:17:35",
+      "last_detail": {
+        "close": 54900.0,
+        "vwap": 54195.154020933434,
+        "vwap_up1": 54565.27022195135,
+        "vwap_dn1": 53825.03781991552,
+        "obv": 7902.0,
+        "obv_prev5": 7489.0,
+        "cmf": -0.1414,
+        "poc": 54110.41666666667,
+        "vah": 55452.08333333333,
+        "val": 53918.75,
+        "insufficient": false,
+        "candles": 16
+      }
+    },
+    "192080": {
+      "status": "pending",
+      "tries": 1,
+      "first_seen": "20260820",
+      "last_check": "10:17:39",
+      "last_detail": {
+        "close": 56700.0,
+        "vwap": 56743.62918250242,
+        "vwap_up1": 57111.08255619187,
+        "vwap_dn1": 56376.175808812965,
+        "obv": -2133.0,
+        "obv_prev5": -3947.0,
+        "cmf": -0.2386,
+        "poc": 56608.33333333333,
+        "vah": 57358.33333333333,
+        "val": 56608.33333333333,
+        "insufficient": false,
+        "candles": 16
+      }
+    }
+  },
+  "sold_today": [],
+  "market_regime": true
+}
