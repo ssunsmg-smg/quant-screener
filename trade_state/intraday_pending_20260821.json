@@ -3,14 +3,22 @@
   "candidates": {
     "005850": {
       "status": "pending",
-      "tries": 4,
+      "tries": 5,
       "first_seen": "20260821",
-      "last_check": "13:24:42",
+      "last_check": "14:07:11",
       "last_detail": {
-        "error": "데이터 부족 (0/12 캔들)",
-        "insufficient": true,
-        "candles": 0,
-        "min_candles": 12
+        "close": 52500.0,
+        "vwap": 51960.170204039794,
+        "vwap_up1": 52344.847105052664,
+        "vwap_dn1": 51575.493303026924,
+        "obv": -6278.0,
+        "obv_prev5": -5619.0,
+        "cmf": 0.1774,
+        "poc": 51972.91666666667,
+        "vah": 52289.58333333333,
+        "val": 51418.75,
+        "insufficient": false,
+        "candles": 62
       }
     }
   },
