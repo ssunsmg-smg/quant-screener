@@ -25,22 +25,14 @@
     },
     "192080": {
       "status": "pending",
-      "tries": 4,
+      "tries": 5,
       "first_seen": "20260824",
-      "last_check": "13:29:58",
+      "last_check": "14:12:37",
       "last_detail": {
-        "close": 58550.0,
-        "vwap": 58677.88726226226,
-        "vwap_up1": 58892.71857426061,
-        "vwap_dn1": 58463.05595026391,
-        "obv": -3312.0,
-        "obv_prev5": -3263.0,
-        "cmf": -0.123,
-        "poc": 58525.0,
-        "vah": 58775.0,
-        "val": 58425.0,
-        "insufficient": false,
-        "candles": 54
+        "error": "데이터 부족 (7/12 캔들)",
+        "insufficient": true,
+        "candles": 7,
+        "min_candles": 12
       }
     }
   },
