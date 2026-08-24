@@ -2,43 +2,45 @@
   "date": "20260824",
   "candidates": {
     "005850": {
-      "status": "pending",
-      "tries": 2,
+      "status": "bought",
+      "tries": 3,
       "first_seen": "20260824",
-      "last_check": "11:46:35",
+      "last_check": "12:39:30",
       "last_detail": {
-        "close": 53000.0,
-        "vwap": 52828.68600370978,
-        "vwap_up1": 53073.90741223421,
-        "vwap_dn1": 52583.464595185345,
-        "obv": 854.0,
-        "obv_prev5": -458.0,
-        "cmf": -0.1026,
-        "poc": 52606.25,
-        "vah": 53093.75,
-        "val": 52552.08333333333,
+        "close": 52900.0,
+        "vwap": 52855.21206690562,
+        "vwap_up1": 53022.030410520136,
+        "vwap_dn1": 52688.3937232911,
+        "obv": 32.0,
+        "obv_prev5": -65.0,
+        "cmf": 0.243,
+        "poc": 52906.25,
+        "vah": 53056.25,
+        "val": 52681.25,
         "insufficient": false,
-        "candles": 34
-      }
+        "candles": 30
+      },
+      "buy_price": 52900,
+      "buy_time": "12:39:34"
     },
     "192080": {
       "status": "pending",
-      "tries": 2,
+      "tries": 3,
       "first_seen": "20260824",
-      "last_check": "11:46:53",
+      "last_check": "12:39:51",
       "last_detail": {
-        "close": 58400.0,
-        "vwap": 58738.4197664947,
-        "vwap_up1": 58969.693067301756,
-        "vwap_dn1": 58507.14646568764,
-        "obv": -2243.0,
-        "obv_prev5": -2064.0,
-        "cmf": -0.1788,
-        "poc": 58425.0,
-        "vah": 58925.0,
+        "close": 58800.0,
+        "vwap": 58702.781541704295,
+        "vwap_up1": 58929.201925950765,
+        "vwap_dn1": 58476.361157457824,
+        "obv": -2518.0,
+        "obv_prev5": -2121.0,
+        "cmf": -0.2526,
+        "poc": 58525.0,
+        "vah": 58825.0,
         "val": 58425.0,
         "insufficient": false,
-        "candles": 34
+        "candles": 44
       }
     }
   },
