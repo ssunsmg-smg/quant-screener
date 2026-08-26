@@ -3,12 +3,12 @@
     "peak_price": 54100.0,
     "armed": false,
     "avg_price": 54100.0,
-    "updated": "2026-08-26 10:22:06"
+    "updated": "2026-08-26 11:48:10"
   },
   "005850": {
-    "peak_price": 53300.0,
+    "peak_price": 53500,
     "armed": false,
     "avg_price": 52857.831,
-    "updated": "2026-08-26 10:22:01"
+    "updated": "2026-08-26 11:48:08"
   }
 }
