@@ -1,0 +1,32 @@
+{
+  "date": "20260826",
+  "candidates": {
+    "005850": {
+      "status": "bought",
+      "tries": 0,
+      "first_seen": "20260826"
+    },
+    "192080": {
+      "status": "pending",
+      "tries": 1,
+      "first_seen": "20260826",
+      "last_check": "10:22:12",
+      "last_detail": {
+        "close": 58300.0,
+        "vwap": 58231.660402387795,
+        "vwap_up1": 58417.93602375817,
+        "vwap_dn1": 58045.38478101742,
+        "obv": 752.0,
+        "obv_prev5": 753.0,
+        "cmf": 0.09,
+        "poc": 58264.58333333333,
+        "vah": 58585.41666666667,
+        "val": 58172.91666666667,
+        "insufficient": false,
+        "candles": 17
+      }
+    }
+  },
+  "sold_today": [],
+  "market_regime": true
+}
