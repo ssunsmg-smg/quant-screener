@@ -1,0 +1,46 @@
+{
+  "date": "20260902",
+  "candidates": {
+    "005850": {
+      "status": "bought",
+      "tries": 0,
+      "first_seen": "20260902"
+    },
+    "192080": {
+      "status": "bought",
+      "tries": 1,
+      "first_seen": "20260902",
+      "last_check": "12:22:46",
+      "last_detail": {
+        "close": 58000.0,
+        "vwap": 57959.871971615736,
+        "vwap_up1": 58224.397558224155,
+        "vwap_dn1": 57695.34638500732,
+        "obv": -8524.0,
+        "obv_prev5": -8672.0,
+        "cmf": 0.1012,
+        "poc": 57550.0,
+        "vah": 58150.0,
+        "val": 57550.0,
+        "insufficient": false,
+        "candles": 41
+      },
+      "buy_price": 57900,
+      "buy_time": "12:22:53"
+    },
+    "001060": {
+      "status": "pending",
+      "tries": 1,
+      "first_seen": "20260902",
+      "last_check": "12:22:55",
+      "last_detail": {
+        "error": "데이터 부족 (7/12 캔들)",
+        "insufficient": true,
+        "candles": 7,
+        "min_candles": 12
+      }
+    }
+  },
+  "sold_today": [],
+  "market_regime": true
+}
