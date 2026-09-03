@@ -1,0 +1,12 @@
+{
+  "date": "20260903",
+  "candidates": {
+    "005850": {
+      "status": "bought",
+      "tries": 0,
+      "first_seen": "20260903"
+    }
+  },
+  "sold_today": [],
+  "market_regime": true
+}
