@@ -1,0 +1,13 @@
+{
+  "scan_date": "2026-09-18",
+  "scan_time": "11:08",
+  "screener": "QuantScreener_v6.3.0_KR",
+  "top_stocks": [],
+  "filter_conditions": {
+    "min_roe": 8.0,
+    "max_pbr": 4.0,
+    "max_debt": 150.0,
+    "min_ic": 2.0,
+    "top_n": 20
+  }
+}
